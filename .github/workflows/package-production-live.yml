@@ -1,0 +1,55 @@
+name: Package exact V.East production-live commit
+
+on:
+  push:
+    branches: ["release/package-production-live"]
+    paths:
+      - ".github/workflows/package-production-live.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  package:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - name: Checkout exact deployed production commit
+        uses: actions/checkout@v4
+        with:
+          ref: 5dd586c53a302e7d18f84058a6974e5d62b2ac23
+          fetch-depth: 1
+
+      - name: Verify deployable source
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "5dd586c53a302e7d18f84058a6974e5d62b2ac23"
+          npm install --no-audit --no-fund --package-lock=false
+          npm run verify:source
+          npm run lint
+          npm run build
+
+      - name: Create exact production-live archive
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/veast-production-live
+          git rev-parse HEAD > /tmp/veast-production-live/GITHUB_COMMIT.txt
+          git archive             --format=zip             --prefix=V_East_Corporate_Website_PRODUCTION_LIVE/             --output=/tmp/veast-production-live/V_East_Corporate_Website_PRODUCTION_LIVE_20260924.zip             HEAD
+          (
+            cd /tmp/veast-production-live
+            sha256sum V_East_Corporate_Website_PRODUCTION_LIVE_20260924.zip > V_East_Corporate_Website_PRODUCTION_LIVE_20260924_SHA256.txt
+          )
+          unzip -t /tmp/veast-production-live/V_East_Corporate_Website_PRODUCTION_LIVE_20260924.zip
+
+      - name: Upload exact production-live package
+        uses: actions/upload-artifact@v4
+        with:
+          name: veast-production-live-exact
+          path: |
+            /tmp/veast-production-live/GITHUB_COMMIT.txt
+            /tmp/veast-production-live/V_East_Corporate_Website_PRODUCTION_LIVE_20260924.zip
+            /tmp/veast-production-live/V_East_Corporate_Website_PRODUCTION_LIVE_20260924_SHA256.txt
+          if-no-files-found: error
+          compression-level: 0
