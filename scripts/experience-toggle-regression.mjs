@@ -282,3 +282,5 @@ try {
 } finally {
   await browser.close();
 }
+
+// post-merge verification trigger 2026-09-25
