@@ -21,7 +21,7 @@ jobs:
           fetch-depth: 1
 
       - name: Install project dependencies
-        run: npm install --no-audit --no-fund --package-lock=false
+        run: npm ci --no-audit --no-fund
 
       - name: Source and production build regression gates
         run: |
@@ -72,6 +72,85 @@ jobs:
           npm init -y >/dev/null
           npm install --no-audit --no-fund playwright-core@1.55.0
           command -v google-chrome || command -v chromium || command -v chromium-browser
+
+      - name: Verify production security headers
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl -L --silent --show-error --max-time 20 -D /tmp/live-security-headers.txt -o /dev/null "$LIVE_URL"
+          python3 - <<'PY'
+          from pathlib import Path
+          raw=Path('/tmp/live-security-headers.txt').read_text(encoding='utf-8',errors='replace')
+          blocks=[block for block in raw.replace('\r\n','\n').split('\n\n') if block.strip()]
+          final=blocks[-1].splitlines() if blocks else []
+          headers={}
+          for line in final[1:]:
+              if ':' not in line: continue
+              key,value=line.split(':',1)
+              headers[key.strip().lower()]=value.strip()
+          required={
+              'x-content-type-options':'nosniff',
+              'referrer-policy':'strict-origin-when-cross-origin',
+              'x-frame-options':'DENY',
+              'permissions-policy':'camera=(), microphone=(), geolocation=(), payment=(), usb=()',
+              'x-permitted-cross-domain-policies':'none',
+          }
+          failures=[]
+          for key,value in required.items():
+              actual=headers.get(key,'')
+              if actual.lower()!=value.lower():
+                  failures.append(f'{key}: expected={value!r} actual={actual!r}')
+          csp=headers.get('content-security-policy','')
+          for token in ("frame-ancestors 'none'","base-uri 'self'","object-src 'none'"):
+              if token not in csp:
+                  failures.append(f'content-security-policy missing {token!r}: {csp!r}')
+          if failures:
+              raise SystemExit('Live security headers failed: '+ ' | '.join(failures))
+          print('PASS live production security headers')
+          PY
+
+      - name: Verify live bundle exactly matches current main build
+        shell: bash
+        run: |
+          set -euo pipefail
+          live_html=/tmp/live-fingerprint.html
+          curl -L --silent --show-error --max-time 20 "$LIVE_URL" -o "$live_html"
+          local_assets=$(grep -oE '/assets/[^"[:space:]]+\.(js|css)' dist/index.html | sort -u)
+          live_assets=$(grep -oE '/assets/[^"[:space:]]+\.(js|css)' "$live_html" | sort -u)
+          {
+            echo "CURRENT_MAIN=$(git rev-parse HEAD)"
+            echo "LOCAL_ASSETS"
+            printf '%s\n' "$local_assets"
+            echo "LIVE_ASSETS"
+            printf '%s\n' "$live_assets"
+          } | tee /tmp/live-fingerprint.txt
+          if [ "$local_assets" != "$live_assets" ]; then
+            echo "::error::Live asset names do not match authoritative current main build"
+            exit 2
+          fi
+          while IFS= read -r rel; do
+            [ -n "$rel" ] || continue
+            local_file="dist$rel"
+            live_file="/tmp/live-asset-$(basename "$rel")"
+            test -f "$local_file"
+            curl -L --silent --show-error --max-time 20 "$LIVE_URL$rel" -o "$live_file"
+            local_sha=$(sha256sum "$local_file" | awk '{print $1}')
+            live_sha=$(sha256sum "$live_file" | awk '{print $1}')
+            printf '%s local=%s live=%s\n' "$rel" "$local_sha" "$live_sha" | tee -a /tmp/live-fingerprint.txt
+            if [ "$local_sha" != "$live_sha" ]; then
+              echo "::error::Live asset bytes differ from authoritative current main build: $rel"
+              exit 3
+            fi
+          done <<< "$local_assets"
+          echo "PASS exact live bundle fingerprint" | tee -a /tmp/live-fingerprint.txt
+
+      - name: Live historical bug-class regression
+        shell: bash
+        run: |
+          set -euo pipefail
+          npm install --no-audit --no-fund --no-save --package-lock=false playwright-core@1.55.0
+          CHROME_PATH="$(command -v google-chrome || command -v chromium || command -v chromium-browser)"
+          PREVIEW_URL="$LIVE_URL" CHROME_PATH="$CHROME_PATH" timeout --signal=TERM --kill-after=10s 240s node scripts/historical-regression-matrix.mjs
 
       - name: Live browser E2E
         shell: bash
@@ -256,12 +335,14 @@ jobs:
 
       - name: Upload live evidence
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: veast-live-evidence
           path: |
             /tmp/live-url.txt
             /tmp/probe-summary.txt
+            /tmp/live-security-headers.txt
+            /tmp/live-fingerprint.txt
             /tmp/live-e2e/results.json
             /tmp/live-e2e/desktop.png
             /tmp/live-e2e/contact.png
