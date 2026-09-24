@@ -100,12 +100,42 @@ jobs:
             assert(first.shoreAnimation==='siteEntryShoreReveal'&&first.wetAnimation==='siteEntryWetSand'&&first.backwashAnimation==='siteEntryBackwash','shore/wet-sand/backwash animations active',JSON.stringify({shore:first.shoreAnimation,wet:first.wetAnimation,back:first.backwashAnimation}));
             assert(new Set(first.foamAnimations).size>=3,'foam layers use varied breakup timing',first.foamAnimations.join(','));
 
-            await page.waitForTimeout(700);
-            const second=await page.locator('.site-entry__ocean-svg').evaluate(el=>{const r=el.getBoundingClientRect();return{x:r.x,y:r.y,w:r.width,h:r.height}});
-            const dx=Math.abs(second.x-first.x),dy=Math.abs(second.y-first.y);
-            result.samples={first,second,dx,dy};
-            assert(dy>4,'water advances/retreats visibly along shore axis',`dy=${dy.toFixed(2)}px`);
-            assert(dy>dx*1.15,'vertical shoreward motion dominates lateral drift',`dx=${dx.toFixed(2)} dy=${dy.toFixed(2)}`);
+            const motionSamples=await page.evaluate(async()=>{
+              const read=()=>{
+                const ocean=document.querySelector('.site-entry__ocean-svg');
+                const wet=document.querySelector('.site-entry__shore-wet');
+                const back=document.querySelector('.site-entry__backwash');
+                const r=ocean.getBoundingClientRect();
+                const transform=getComputedStyle(ocean).transform;
+                const matrix=new DOMMatrixReadOnly(transform==='none'?'matrix(1,0,0,1,0,0)':transform);
+                return{
+                  x:r.x,y:r.y,w:r.width,h:r.height,
+                  scaleX:matrix.a,scaleY:matrix.d,tx:matrix.e,ty:matrix.f,
+                  wet:+getComputedStyle(wet).opacity,
+                  back:+getComputedStyle(back).opacity
+                };
+              };
+              const samples=[];
+              const start=performance.now();
+              return await new Promise(resolve=>{
+                const tick=now=>{
+                  samples.push(read());
+                  if(now-start<1200)requestAnimationFrame(tick);
+                  else resolve(samples);
+                };
+                requestAnimationFrame(tick);
+              });
+            });
+            const range=values=>Math.max(...values)-Math.min(...values);
+            const scaleYRange=range(motionSamples.map(s=>s.scaleY));
+            const heightRange=range(motionSamples.map(s=>s.h));
+            const xRange=range(motionSamples.map(s=>s.x));
+            const wetRange=range(motionSamples.map(s=>s.wet));
+            const backRange=range(motionSamples.map(s=>s.back));
+            result.samples={first,motionSamples,scaleYRange,heightRange,xRange,wetRange,backRange};
+            assert(scaleYRange>.025&&heightRange>2,'phase-locked water visibly surges/backwashes around fixed shoreline',`scaleYRange=${scaleYRange.toFixed(4)} heightRange=${heightRange.toFixed(2)}px`);
+            assert(xRange<3,'shoreward motion avoids lateral seam drift',`xRange=${xRange.toFixed(2)}px`);
+            assert(wetRange>.08&&backRange>.08,'wet-sand and backwash phases visibly evolve',`wetRange=${wetRange.toFixed(3)} backRange=${backRange.toFixed(3)}`);
             const active=await page.evaluate(()=>({
               shore:+getComputedStyle(document.querySelector('.site-entry__shore')).opacity,
               wet:+getComputedStyle(document.querySelector('.site-entry__shore-wet')).opacity,
@@ -142,7 +172,7 @@ jobs:
 
       - name: Upload sea evidence
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: veast-sea-motion-evidence
           path: |
