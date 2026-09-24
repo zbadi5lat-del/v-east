@@ -1,0 +1,78 @@
+name: V.East exact d0df final package
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - ".github/workflows/final-package-d0df.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  package:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - name: Checkout authoritative main
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 1
+
+      - name: Assert exact authoritative commit
+        shell: bash
+        run: |
+          set -euo pipefail
+          expected="d0df7bbe14848252a8a45b6ff5c842596a519625"
+          actual="$(git rev-parse HEAD)"
+          echo "EXPECTED=$expected"
+          echo "ACTUAL=$actual"
+          test "$actual" = "$expected"
+
+      - name: Install dependencies
+        run: npm install --no-audit --no-fund --package-lock=false
+
+      - name: Final release gates
+        shell: bash
+        run: |
+          set -euo pipefail
+          npm run verify:source
+          npm run verify:worldclass
+          npm run verify:final-experience
+          npm run lint
+          npm run build
+          npm install --package-lock-only --ignore-scripts --no-audit --no-fund
+          npm audit --audit-level=high
+
+      - name: Repository release hygiene
+        shell: bash
+        run: |
+          set -euo pipefail
+          test ! -e .env
+          test ! -e .env.local
+          test ! -d .vercel
+          ! git ls-files | grep -E '(^|/)(node_modules|dist|\.vercel|\.env)(/|$)'
+          ! grep -RIE --exclude-dir=node_modules --exclude-dir=.git --exclude='*.webp' --exclude='*.pdf'             '(BEGIN (RSA|OPENSSH|EC|DSA) PRIVATE KEY|ghp_[A-Za-z0-9]{20,}|github_pat_[A-Za-z0-9_]{20,}|sk-[A-Za-z0-9_-]{20,}|VERCEL_TOKEN\s*=|API_KEY\s*=)'             . || { echo "::error::Potential secret-like material found"; exit 1; }
+
+      - name: Create exact tracked-source package
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/veast-final
+          git rev-parse HEAD > /tmp/veast-final/GITHUB_COMMIT.txt
+          git archive             --format=zip             --prefix=V_East_Corporate_Website_FINAL_GITHUB_d0df7bbe/             --output=/tmp/veast-final/V_East_FINAL_SEND_TO_FRIEND_GITHUB_d0df7bbe_20260925.zip             HEAD
+          cd /tmp/veast-final
+          sha256sum V_East_FINAL_SEND_TO_FRIEND_GITHUB_d0df7bbe_20260925.zip             > V_East_FINAL_SEND_TO_FRIEND_GITHUB_d0df7bbe_20260925_SHA256.txt
+          unzip -t V_East_FINAL_SEND_TO_FRIEND_GITHUB_d0df7bbe_20260925.zip
+
+      - name: Upload exact final package
+        uses: actions/upload-artifact@v4
+        with:
+          name: veast-exact-d0df-current-main
+          path: |
+            /tmp/veast-final/GITHUB_COMMIT.txt
+            /tmp/veast-final/V_East_FINAL_SEND_TO_FRIEND_GITHUB_d0df7bbe_20260925.zip
+            /tmp/veast-final/V_East_FINAL_SEND_TO_FRIEND_GITHUB_d0df7bbe_20260925_SHA256.txt
+          compression-level: 0
+          if-no-files-found: error
