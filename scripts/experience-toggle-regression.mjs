@@ -27,11 +27,12 @@ async function visibleRevealState(page, selector) {
     const nodes = [...section.querySelectorAll('[data-reveal]')].filter((node) => {
       const rect = node.getBoundingClientRect();
       const style = getComputedStyle(node);
+      const visibleHeight = Math.max(0, Math.min(rect.bottom, viewportHeight * 0.9) - Math.max(rect.top, 0));
+      const visibleRatio = rect.height > 0 ? visibleHeight / rect.height : 0;
       return style.display !== 'none' &&
         style.visibility !== 'hidden' &&
         rect.height > 0 &&
-        rect.bottom > 0 &&
-        rect.top < viewportHeight;
+        visibleRatio >= 0.2;
     });
     return {
       missing: false,
