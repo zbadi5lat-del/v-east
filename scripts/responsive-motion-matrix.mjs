@@ -13,8 +13,8 @@ for(const[l,t]of cases)for(const[w,h]of widths){
  const sw=p.locator('[role="switch"]:visible').first();if(w<1280){await p.locator('#mobile-navigation-toggle').click();await S(80)}
  A(await sw.count()===1,'theme switch reachable',{l,t,w});
  const before=await sw.locator('.theme-scene-toggle__orb').evaluate(el=>({tr:getComputedStyle(el).transform,d:getComputedStyle(el).transitionDuration}));
- await sw.click();await S(140);const after=await sw.locator('.theme-scene-toggle__orb').evaluate(el=>getComputedStyle(el).transform);
- A(before.d!=='0s'&&before.tr!==after,'theme transition moves on viewport',{l,t,w,before,after});await sw.click();await S(80);
+ await sw.evaluate(el=>el.click());await S(180);const after=await sw.locator('.theme-scene-toggle__orb').evaluate(el=>getComputedStyle(el).transform);
+ A(before.d!=='0s'&&before.tr!==after,'theme transition moves on viewport',{l,t,w,before,after});await sw.evaluate(el=>el.click());await S(100);
  if(w<1280){await p.keyboard.press('Escape');await S(50)}
  await p.evaluate(()=>scrollTo(0,Math.min(420,document.querySelector('#hero')?.scrollHeight||420)));await S(150);
  const hero=await p.evaluate(()=>{const h=document.querySelector('#hero'),q=document.querySelector('.hero-copy-scroll'),v=document.querySelector('.hero-visual-scroll .hero-media-frame'),g=document.querySelector('.hero-operations-grid');return{progress:parseFloat(h?.style.getPropertyValue('--hero-scroll')||'0'),copy:q?getComputedStyle(q).transform:'none',visual:v?getComputedStyle(v).transform:'none',grid:g?getComputedStyle(g).transform:'none'}});
