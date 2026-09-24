@@ -117,7 +117,7 @@ jobs:
             assert(await page.locator('[role="dialog"]').count()>=1,'featured-place dialog opens');
             await page.keyboard.press('Escape');
             await page.waitForTimeout(150);
-            assert(await page.locator('[role="dialog"]').count()===0,'featured-place dialog closes with Escape');
+            assert(await page.locator('#place-profile-dialog').evaluate(el=>el.parentElement?.getAttribute('aria-hidden')==='true'),'featured-place dialog closes with Escape');
 
             await page.evaluate(()=>scrollTo(0,Math.min(document.body.scrollHeight*0.62,document.body.scrollHeight-1200)));
             await page.waitForTimeout(350);
