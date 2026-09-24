@@ -1,0 +1,67 @@
+name: V.East live runtime regression verification
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - ".qa/LIVE_RUNTIME_PROBE"
+      - ".github/workflows/live-runtime-regression-temp.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  runtime:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - name: Checkout authoritative main
+        uses: actions/checkout@v7
+        with:
+          ref: main
+          fetch-depth: 1
+
+      - name: Setup Node
+        uses: actions/setup-node@v7
+        with:
+          node-version: 22
+
+      - name: Install project and browser dependencies
+        shell: bash
+        run: |
+          set -euo pipefail
+          npm install --no-audit --no-fund --package-lock=false
+          npm install --no-audit --no-fund --no-save --package-lock=false playwright-core@1.55.0
+          mkdir -p /tmp/live-e2e
+          cd /tmp/live-e2e
+          npm init -y >/dev/null
+          ln -s "$GITHUB_WORKSPACE/node_modules" node_modules
+          command -v google-chrome || command -v chromium || command -v chromium-browser
+
+      - name: Historical live regression
+        shell: bash
+        run: |
+          set -euo pipefail
+          CHROME_PATH="$(command -v google-chrome || command -v chromium || command -v chromium-browser)"
+          PREVIEW_URL="https://v-east.vercel.app/" CHROME_PATH="$CHROME_PATH" timeout --signal=TERM --kill-after=10s 240s node scripts/historical-regression-matrix.mjs
+
+      - name: No-refresh live regression
+        shell: bash
+        run: |
+          set -euo pipefail
+          CHROME_PATH="$(command -v google-chrome || command -v chromium || command -v chromium-browser)"
+          PREVIEW_URL="https://v-east.vercel.app/" CHROME_PATH="$CHROME_PATH" timeout --signal=TERM --kill-after=10s 180s node scripts/experience-toggle-regression.mjs
+
+      - name: Responsive live matrix
+        shell: bash
+        run: |
+          set -euo pipefail
+          CHROME_PATH="$(command -v google-chrome || command -v chromium || command -v chromium-browser)"
+          LIVE_URL="https://v-east.vercel.app/" CHROME_PATH="$CHROME_PATH" timeout --signal=TERM --kill-after=10s 180s node scripts/responsive-motion-matrix.mjs
+
+      - name: Full live production matrix
+        shell: bash
+        run: |
+          set -euo pipefail
+          CHROME_PATH="$(command -v google-chrome || command -v chromium || command -v chromium-browser)"
+          LIVE_URL="https://v-east.vercel.app/" CHROME_PATH="$CHROME_PATH" timeout --signal=TERM --kill-after=10s 240s node scripts/live-production-matrix.mjs
