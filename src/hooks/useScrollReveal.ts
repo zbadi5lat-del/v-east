@@ -25,13 +25,12 @@ export function useScrollReveal() {
   useEffect(() => {
     const root = document.documentElement;
     const reducedMotionQuery = window.matchMedia('(prefers-reduced-motion: reduce)');
-    root.classList.add('motion-ready');
-
     let observer: IntersectionObserver | null = null;
     let refreshFrame = 0;
 
     const reveal = (element: HTMLElement) => {
       element.dataset.revealed = 'true';
+      element.classList.remove('reveal-pending');
       element.classList.add('is-visible');
       observer?.unobserve(element);
     };
@@ -50,6 +49,8 @@ export function useScrollReveal() {
         return;
       }
 
+      element.classList.add('reveal-pending');
+      element.classList.remove('is-visible');
       observer.observe(element);
     };
 
@@ -70,12 +71,16 @@ export function useScrollReveal() {
       scope.querySelectorAll<HTMLElement>(REVEAL_SELECTOR).forEach(prepare);
     };
 
+    // Prepare unseen offscreen content first, then enable motion CSS.
+    // This means content is visible by default and can never disappear merely
+    // because React replaced a node during an AR/EN or Dark/Light switch.
+    scan();
+    root.classList.add('motion-ready');
+
     const refresh = () => {
       window.cancelAnimationFrame(refreshFrame);
       refreshFrame = window.requestAnimationFrame(() => scan());
     };
-
-    scan();
 
     const mutationObserver = new MutationObserver((mutations) => {
       if (!mutations.some((mutation) => mutation.type === 'childList' && mutation.addedNodes.length > 0)) return;
@@ -93,6 +98,9 @@ export function useScrollReveal() {
       window.cancelAnimationFrame(refreshFrame);
       window.removeEventListener(EXPERIENCE_CHANGE_EVENT, refresh);
       reducedMotionQuery.removeEventListener('change', refresh);
+      document.querySelectorAll<HTMLElement>(REVEAL_SELECTOR).forEach((element) => {
+        element.classList.remove('reveal-pending');
+      });
     };
   }, []);
 }
