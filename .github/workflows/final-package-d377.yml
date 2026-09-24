@@ -1,0 +1,62 @@
+name: V.East exact d377 final package
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - ".github/workflows/final-package-d377.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  package:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 12
+    steps:
+      - name: Checkout authoritative main
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 1
+
+      - name: Install dependencies
+        run: npm install --no-audit --no-fund --package-lock=false
+
+      - name: Final gates
+        run: |
+          set -euo pipefail
+          npm run verify:source
+          npm run verify:worldclass
+          npm run verify:final-experience
+          npm run lint
+          npm run build
+
+      - name: Create exact tracked-source package
+        shell: bash
+        run: |
+          set -euo pipefail
+          expected="d3774f11a9743d902d149d4185a2939f46786592"
+          actual="$(git rev-parse HEAD)"
+          test "$actual" = "$expected"
+          mkdir -p /tmp/veast-package
+          printf '%s\n' "$actual" > /tmp/veast-package/GITHUB_COMMIT.txt
+          git archive \
+            --format=zip \
+            --prefix=V_East_Corporate_Website_FINAL_GITHUB_d3774f11/ \
+            --output=/tmp/veast-package/V_East_FINAL_SEND_TO_FRIEND_GITHUB_d3774f11_20260925.zip \
+            HEAD
+          cd /tmp/veast-package
+          sha256sum V_East_FINAL_SEND_TO_FRIEND_GITHUB_d3774f11_20260925.zip > V_East_FINAL_SEND_TO_FRIEND_GITHUB_d3774f11_20260925_SHA256.txt
+          unzip -t V_East_FINAL_SEND_TO_FRIEND_GITHUB_d3774f11_20260925.zip
+
+      - name: Upload exact package
+        uses: actions/upload-artifact@v4
+        with:
+          name: veast-exact-d377-current-main
+          path: |
+            /tmp/veast-package/GITHUB_COMMIT.txt
+            /tmp/veast-package/V_East_FINAL_SEND_TO_FRIEND_GITHUB_d3774f11_20260925.zip
+            /tmp/veast-package/V_East_FINAL_SEND_TO_FRIEND_GITHUB_d3774f11_20260925_SHA256.txt
+          compression-level: 0
+          if-no-files-found: error
