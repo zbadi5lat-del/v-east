@@ -147,7 +147,7 @@ export function FeaturedPlaces() {
                 </span>
               </button>
             ))}
-          </div>          </div>
+          </div>
         </div>
       </section>
 
