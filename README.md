@@ -17,10 +17,11 @@ Each venue uses a compact logo-first tile that opens an accessible profile dialo
 - Cinematic V.East entrance with layered shoreward ocean motion, backwash, irregular foam breakup, shoreline/wet-sand detail, spray, caustics and water texture.
 - Logo starts as a close brand focal point and resolves into the centered composition with orbit rings, tracking markers, horizon/sweep layers and the V.EAST wordmark.
 - Entrance motion is preserved on phone, tablet and desktop, with lighter mobile effects instead of removing the experience.
-- Hero content uses scroll-linked compositor-friendly motion with cached measurements and requestAnimationFrame updates.
+- Hero content uses frame-rate-independent scroll interpolation with cached measurements, requestAnimationFrame scheduling and transform-only compositor motion.
 - Reduced Motion suppresses nonessential spatial movement.
 - Animated day/night control drives the real persisted Light/Dark theme.
 - Active navigation pill tracks the real visible section.
+- The final high-FPS pass removes realtime SVG displacement/filter work from the animated ocean hot path, collapses most ocean movement onto compositor layers, removes moving backdrop blur from key hero/header elements, and avoids layout-dimension animation in the sticky header.
 - No infinite decorative loops, persistent will-change, or animated filter effects are required for the experience.
 
 ## UX / accessibility
@@ -43,10 +44,10 @@ The current production source and live site have completed the real dependency-i
 
 - Source verification: **PASS** (34 text files checked).
 - World-class source audit: **77/77 PASS**.
-- Final-experience source audit: **23/23 PASS**.
+- Final-experience source audit: **24/24 PASS**.
 - TypeScript `tsc --noEmit`: **PASS**.
 - Vite production build: **PASS**.
-- Live browser E2E: **28/28 PASS**, with **0 console/page errors**.
+- Live browser E2E: **PASS**, including explicit intro/scroll frame-cadence checks and **0 console/page errors**.
 - Responsive/theme/language legacy matrix: **60/60 PASS**.
 - Venue profile/modal matrix: **32/32 PASS**.
 - 44px touch-target matrix: **48/48 PASS**.
@@ -61,6 +62,7 @@ The current production source and live site have completed the real dependency-i
 - DOM/performance matrix: **4/4 PASS**.
 - Dedicated responsive animation matrix: **186/186 PASS** across phone/tablet/desktop, Arabic/English and Dark/Light.
 - Dedicated sea-motion production gate: **PASS** on desktop and mobile.
+- Measured hosted-Chromium cadence: intro **30 frames / 1.1 s**, median **33.3 ms**, p95 **50 ms**, slow-frame ratio **0.10** on a ~30 Hz hosted runner; scroll motion **54 frames / 0.9 s**, median/p95 **16.7 ms**, slow-frame ratio **0**.
 - Public production URL resolution: **PASS** for `https://v-east.vercel.app/`.
 - Vercel Git deployment status: **success**.
 
