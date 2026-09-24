@@ -37,7 +37,7 @@ jobs:
           node-version: 22
 
       - name: Install dependencies
-        run: npm install --no-audit --no-fund --package-lock=false
+        run: npm ci --no-audit --no-fund
 
       - name: Static source and build gates
         shell: bash
@@ -90,7 +90,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          npm install --package-lock-only --ignore-scripts --no-audit --no-fund
+          test -f package-lock.json
           npm audit --audit-level=high
 
       - name: Install browser driver library
