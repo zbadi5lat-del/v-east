@@ -2509,3 +2509,217 @@ html[data-theme="light"] .site-entry__foam-pockets { fill: rgba(252,254,249,.34)
   .site-entry__spray--6,
   .site-entry__spray--7 { display: none; }
 }
+
+
+/* ========================================================================== */
+/* 2026-09-24 — Smooth Motion / high-FPS performance pass                     */
+/* Keeps the cinematic identity while moving expensive work off the hot path. */
+/* ========================================================================== */
+
+:root {
+  --motion-fast: 150ms;
+  --motion-base: 260ms;
+  --motion-slow: 520ms;
+  --ease-standard: cubic-bezier(.22,.72,.22,1);
+  --ease-emphasized: cubic-bezier(.16,1,.3,1);
+}
+
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation-duration: 300ms;
+  animation-timing-function: var(--ease-emphasized);
+}
+
+/* Avoid animating layout dimensions in the sticky header. */
+.site-header {
+  transition: transform 240ms var(--ease-emphasized), opacity 160ms ease;
+}
+.site-header__inner {
+  height: 76px !important;
+  max-width: min(90rem, calc(100% - 20px));
+  border-radius: 20px;
+  background: rgba(7,27,36,.95);
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+  transition: transform 260ms var(--ease-emphasized), border-radius 220ms var(--ease-emphasized), background-color 200ms ease;
+  backface-visibility: hidden;
+}
+.site-header.is-scrolled .site-header__inner {
+  height: 76px !important;
+  max-width: min(90rem, calc(100% - 20px));
+  transform: translate3d(0,7px,0) scale(.985);
+  background: rgba(6,24,33,.975);
+  box-shadow: 0 14px 38px rgba(0,0,0,.20), 0 0 0 1px rgba(126,167,164,.04);
+}
+.site-header.is-scrolled.is-going-down .site-header__inner { transform: translate3d(0,8px,0) scale(.977); }
+.site-header.is-scrolled.is-going-up .site-header__inner { transform: translate3d(0,6px,0) scale(.989); }
+.site-header .desktop-nav-track { transition-duration: 220ms; }
+.site-header-progress__fill::after { transition-duration: 180ms; }
+html[data-theme="light"] .site-header__inner { background: rgba(247,244,237,.97); }
+html[data-theme="light"] .site-header.is-scrolled .site-header__inner { background: rgba(247,244,237,.985); }
+
+/* Scroll-linked hero layers stay transform-only; remove moving backdrop blurs. */
+.hero-copy-scroll,
+.hero-visual-scroll .hero-media-frame,
+.hero-operations-grid,
+.hero-field-card,
+.hero-status-card,
+.hero-media-main img,
+.hero-enter--5 {
+  backface-visibility: hidden;
+}
+.hero-field-card,
+.hero-status-card,
+.hero-copy-scroll > .hero-enter--1,
+.hero-section .btn-secondary {
+  -webkit-backdrop-filter: none !important;
+  backdrop-filter: none !important;
+}
+.hero-field-card { background: rgba(22,60,73,.985); }
+.hero-status-card,
+.hero-copy-scroll > .hero-enter--1 { background: rgba(7,27,36,.94); }
+
+/* Ocean shape is already organic; realtime SVG displacement/filtering is costly. */
+.site-entry {
+  contain: layout paint style;
+  backface-visibility: hidden;
+}
+.site-entry__ocean-svg,
+.site-entry__water-surface,
+.site-entry__foam-organic,
+.site-entry__ocean-foam {
+  filter: none !important;
+}
+.site-entry__ocean-glaze {
+  mix-blend-mode: normal;
+  opacity: .48;
+}
+.site-entry__spray { box-shadow: 0 0 10px rgba(126,167,164,.42); }
+.site-entry__logo-stage,
+.site-entry__logo,
+.site-entry__ocean,
+.site-entry__ocean-svg,
+.site-entry__shore,
+.site-entry__shore-wet,
+.site-entry__backwash,
+.site-entry__orbit,
+.site-entry__marker,
+.site-entry__track,
+.site-entry__wordmark,
+.site-entry__scope {
+  backface-visibility: hidden;
+}
+
+/* Faster cadence: same narrative, less dead time and faster visual response. */
+@media (prefers-reduced-motion: no-preference) {
+  .site-entry { animation: siteEntryExit 3200ms var(--ease-emphasized) both; }
+  .site-entry::before { animation: siteEntryGrid 2250ms var(--ease-emphasized) both; }
+  .site-entry__logo { animation: siteEntryLogoOcean 2280ms var(--ease-emphasized) both; }
+  .site-entry__orbit--outer { animation: siteEntryOrbitOuter 1900ms var(--ease-emphasized) 180ms both; }
+  .site-entry__orbit--inner { animation: siteEntryOrbitInner 1780ms var(--ease-emphasized) 280ms both; }
+  .site-entry__wordmark { animation: siteEntryWordmarkOcean 1940ms var(--ease-emphasized) 400ms both; }
+  .site-entry__scope { animation: siteEntryScopeOcean 1440ms var(--ease-emphasized) 900ms both; }
+  .site-entry__horizon { animation: siteEntryHorizon 1880ms var(--ease-emphasized) 220ms both; }
+  .site-entry__sweep { animation: siteEntrySweep 1640ms var(--ease-emphasized) 340ms both; }
+  .site-entry__ocean { animation: siteEntryOcean 2580ms var(--ease-emphasized) 100ms both; }
+  .site-entry__ocean-svg { animation: siteEntryOceanSurge 2580ms cubic-bezier(.22,.8,.25,1) 100ms both; }
+  .site-entry__ocean-crest { animation: siteEntryOceanCrest 1120ms ease-in-out 610ms both; }
+  .site-entry__ocean-ripple--one { animation: siteEntryRipple 1200ms ease-in-out 760ms both; }
+  .site-entry__ocean-ripple--two { animation: siteEntryRipple 1280ms ease-in-out 880ms both; }
+  .site-entry__marker--1 { animation: siteEntryMarker 1160ms var(--ease-emphasized) 460ms both; }
+  .site-entry__marker--2 { animation: siteEntryMarker 1160ms var(--ease-emphasized) 570ms both; }
+  .site-entry__marker--3 { animation: siteEntryMarker 1160ms var(--ease-emphasized) 680ms both; }
+  .site-entry__marker--4 { animation: siteEntryMarker 1160ms var(--ease-emphasized) 790ms both; }
+  .site-entry__spray--1 { animation: siteEntrySpray 820ms ease-out 690ms both; }
+  .site-entry__spray--2 { animation: siteEntrySpray 760ms ease-out 780ms both; }
+  .site-entry__spray--3 { animation: siteEntrySpray 860ms ease-out 860ms both; }
+  .site-entry__spray--4 { animation: siteEntrySpray 780ms ease-out 960ms both; }
+  .site-entry__spray--5 { animation: siteEntrySpray 820ms ease-out 1040ms both; }
+  .site-entry__spray--6 { animation: siteEntrySpray 760ms ease-out 820ms both; }
+  .site-entry__spray--7 { animation: siteEntrySpray 840ms ease-out 1090ms both; }
+  .site-entry__track { animation: siteEntryTrackBase 1900ms var(--ease-emphasized) 320ms both; }
+  .site-entry__track::after { animation: siteEntryTrackSweep 1420ms var(--ease-emphasized) 480ms both; }
+
+  .site-entry__shore { animation: siteEntryShoreReveal 2550ms var(--ease-emphasized) 120ms both; }
+  .site-entry__shore-wet { animation: siteEntryWetSand 2200ms cubic-bezier(.22,.8,.25,1) 320ms both; }
+  .site-entry__backwash { animation: siteEntryBackwash 1780ms cubic-bezier(.22,.8,.25,1) 620ms both; }
+  .site-entry__ocean-back { animation: siteEntryDepthWaveBack 2450ms ease-in-out 160ms both; }
+  .site-entry__ocean-mid { animation: siteEntryDepthWaveMid 2300ms ease-in-out 240ms both; }
+  .site-entry__ocean-front { animation: siteEntryDepthWaveFront 2140ms ease-in-out 330ms both; }
+  .site-entry__ocean-foam--one { animation: siteEntryFoamBreakOne 1980ms ease-in-out 430ms both; }
+  .site-entry__ocean-foam--two { animation: siteEntryFoamBreakTwo 1840ms ease-in-out 570ms both; }
+  .site-entry__ocean-foam--three { animation: siteEntryFoamBreakThree 1680ms ease-in-out 720ms both; }
+  .site-entry__foam-pockets { animation: siteEntryFoamPockets 1540ms ease-in-out 650ms both; }
+  .site-entry__caustics { animation: siteEntryCaustics 1760ms ease-in-out 520ms both; }
+
+  .site-header { animation: headerSettle 500ms var(--ease-emphasized) 2500ms both; }
+  .hero-enter { animation-duration: 540ms; }
+  .hero-enter--1 { animation-delay: 2450ms; }
+  .hero-enter--2 { animation-delay: 2510ms; }
+  .hero-enter--3 { animation-delay: 2580ms; }
+  .hero-enter--4 { animation-delay: 2650ms; }
+  .hero-enter--visual { animation-delay: 2480ms; }
+  .hero-enter--5 { animation-delay: 2720ms; }
+  .hero-media-main { animation-duration: 700ms; animation-delay: 2480ms; }
+  .hero-media-main img { animation-duration: 820ms; animation-delay: 2480ms; }
+  .hero-field-card { animation-duration: 560ms; animation-delay: 2700ms; }
+  .hero-status-card { animation-duration: 540ms; animation-delay: 2770ms; }
+
+  html.motion-ready [data-reveal] {
+    transition-duration: 460ms, 460ms;
+  }
+  .operating-flow__line span { transition-duration: 720ms; }
+
+  @keyframes siteEntryLogoOcean {
+    0% { opacity: 0; transform: scale(2.85) rotate(-3deg); }
+    12% { opacity: 1; }
+    36% { opacity: 1; transform: scale(1.08) rotate(.35deg); }
+    47%, 80% { opacity: 1; transform: scale(1) rotate(0); }
+    100% { opacity: 0; transform: scale(.93); }
+  }
+
+  /* Foam now changes shape through authored segments + transforms/opacity only. */
+  @keyframes siteEntryFoamBreakOne {
+    0% { opacity: .08; transform: translate3d(0,-7%,0) scaleX(.98); }
+    30% { opacity: .90; transform: translate3d(0,4%,0) scaleX(1.012); }
+    58% { opacity: .40; transform: translate3d(0,-2%,0) scaleX(.996); }
+    82% { opacity: .76; transform: translate3d(0,5%,0) scaleX(1.008); }
+    100% { opacity: .10; transform: translate3d(0,-4%,0) scaleX(.99); }
+  }
+  @keyframes siteEntryFoamBreakTwo {
+    0% { opacity: .04; transform: translate3d(0,-6%,0) scaleX(1.008); }
+    34% { opacity: .68; transform: translate3d(0,5%,0) scaleX(.992); }
+    62% { opacity: .26; transform: translate3d(0,-3%,0) scaleX(1.008); }
+    84% { opacity: .54; transform: translate3d(0,3%,0) scaleX(.998); }
+    100% { opacity: .07; transform: translate3d(0,-5%,0) scaleX(1.005); }
+  }
+  @keyframes siteEntryFoamBreakThree {
+    0%, 14% { opacity: 0; transform: translate3d(0,-4%,0) scaleX(.992); }
+    40% { opacity: .50; transform: translate3d(0,4%,0) scaleX(1.006); }
+    69% { opacity: .16; transform: translate3d(0,-2%,0) scaleX(.998); }
+    86% { opacity: .40; transform: translate3d(0,2%,0) scaleX(1.004); }
+    100% { opacity: 0; transform: translate3d(0,-3%,0) scaleX(.994); }
+  }
+}
+
+/* Theme toggle: shorter, responsive transitions rather than slow interpolation. */
+.theme-scene-toggle { transition-duration: 300ms, 190ms, 190ms; }
+.theme-scene-toggle__orb { transition-duration: 340ms, 240ms, 240ms, 240ms; }
+.theme-scene-toggle__sun,
+.theme-scene-toggle__moon { transition-duration: 220ms, 300ms; }
+.theme-scene-toggle__water { transition-duration: 300ms, 260ms; }
+.theme-scene-toggle__stars { transition-duration: 190ms; }
+.theme-scene-toggle__clouds { transition-duration: 220ms, 340ms; }
+
+/* Hover movement stays crisp without long paint-heavy shadow interpolation. */
+.place-logo-card__halo { filter: blur(12px); transition-duration: 220ms, 260ms; }
+.place-logo-card__ring { transition-duration: 300ms, 220ms, 220ms; }
+
+@media (max-width: 767px) {
+  .site-entry__caustics path:nth-child(n+3),
+  .site-entry__foam-pockets path:nth-child(n+3),
+  .site-entry__spray--5,
+  .site-entry__spray--6,
+  .site-entry__spray--7 { display: none; }
+  .site-entry__ocean-glaze { opacity: .38; }
+}
