@@ -144,6 +144,47 @@ jobs:
 
           echo "PASS exact live commit fingerprint $actual"
 
+      - name: Verify exact live JS/CSS bundle bytes
+        shell: bash
+        run: |
+          set -euo pipefail
+          live_html=/tmp/live-bundle.html
+          bundle_report=/tmp/live-bundle-fingerprint.txt
+          curl -L --silent --show-error --max-time 20 "$LIVE_URL" -o "$live_html"
+
+          local_assets=$(grep -oE '/assets/[^"[:space:]]+\.(js|css)' dist/index.html | sort -u)
+          live_assets=$(grep -oE '/assets/[^"[:space:]]+\.(js|css)' "$live_html" | sort -u)
+
+          {
+            echo "CURRENT_MAIN=$(git rev-parse HEAD)"
+            echo "LOCAL_ASSETS"
+            printf '%s\n' "$local_assets"
+            echo "LIVE_ASSETS"
+            printf '%s\n' "$live_assets"
+          } | tee "$bundle_report"
+
+          if [ -z "$local_assets" ] || [ "$local_assets" != "$live_assets" ]; then
+            echo "::error::Live Vite asset names do not exactly match authoritative main"
+            exit 2
+          fi
+
+          while IFS= read -r rel; do
+            [ -n "$rel" ] || continue
+            local_file="dist$rel"
+            live_file="/tmp/live-asset-$(basename "$rel")"
+            test -f "$local_file"
+            curl -L --silent --show-error --max-time 20 "$LIVE_URL$rel" -o "$live_file"
+            local_sha=$(sha256sum "$local_file" | awk '{print $1}')
+            live_sha=$(sha256sum "$live_file" | awk '{print $1}')
+            printf '%s local=%s live=%s\n' "$rel" "$local_sha" "$live_sha" | tee -a "$bundle_report"
+            if [ "$local_sha" != "$live_sha" ]; then
+              echo "::error::Live asset bytes differ from authoritative main: $rel"
+              exit 3
+            fi
+          done <<< "$local_assets"
+
+          echo "PASS exact live JS/CSS bundle bytes" | tee -a "$bundle_report"
+
       - name: Install browser driver only
         shell: bash
         run: |
@@ -351,6 +392,9 @@ jobs:
           path: |
             /tmp/live-url.txt
             /tmp/probe-summary.txt
+            /tmp/live-security-headers.txt
+            /tmp/live-fingerprint.txt
+            /tmp/live-bundle-fingerprint.txt
             /tmp/live-e2e/results.json
             /tmp/live-e2e/desktop.png
             /tmp/live-e2e/contact.png
