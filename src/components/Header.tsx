@@ -64,7 +64,7 @@ export function Header({onNavigateToContact}:HeaderProps){
   },[desktopActiveSection,language,desktopNavItems]);
   useEffect(()=>{const previous=document.body.style.overflow; document.body.style.overflow=open?'hidden':previous; return()=>{document.body.style.overflow=previous}},[open]);
   useEffect(()=>{if(!open)return; document.getElementById('mobile-navigation-close')?.focus(); const onKeyDown=(event:KeyboardEvent)=>{if(event.key==='Escape'){setOpen(false);focusMobileNavigationToggle();return} if(event.key!=='Tab')return; const drawer=document.getElementById('mobile-navigation'); const focusable=drawer?.querySelectorAll<HTMLElement>('a[href], button:not([disabled])'); if(!focusable?.length)return; const first=focusable[0],last=focusable[focusable.length-1]; if(event.shiftKey&&document.activeElement===first){event.preventDefault();last.focus()}else if(!event.shiftKey&&document.activeElement===last){event.preventDefault();first.focus()}}; window.addEventListener('keydown',onKeyDown); return()=>window.removeEventListener('keydown',onKeyDown)},[open]);
-  useEffect(()=>{setOpen(false)},[language]);
+  useEffect(()=>{if(!open)return;setOpen(false);focusMobileNavigationToggle()},[language]);
   const closeDrawer=(returnFocus=false)=>{setOpen(false);if(returnFocus)focusMobileNavigationToggle()};
   const navigateToContactFromDrawer=()=>{setOpen(false);requestAnimationFrame(()=>requestAnimationFrame(onNavigateToContact))};
   return <>
