@@ -1,3 +1,2 @@
-release_commit=3ac746a2a189bee7e56596a7534fb9e90753a771
-probe=smooth-motion-frame-cadence-final
-cadence_gate=075fa8170f38d75548cd64475e330edf0752b1fe
+release_commit=f4d65a0cc01e1c0687b67a2f13f6b563e835b05c
+probe=ultra-smooth-compositor-cadence-final
