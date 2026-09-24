@@ -1,0 +1,61 @@
+name: V.East final exact package 548d9cd
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - ".github/workflows/final-package-548d.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  package:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 12
+    steps:
+      - name: Checkout authoritative current main
+        uses: actions/checkout@v7
+        with:
+          ref: main
+          fetch-depth: 1
+
+      - name: Verify exact main
+        shell: bash
+        run: |
+          set -euo pipefail
+          expected="548d9cd442e3f2bfb06eb1d9fa7c153f3be872aa"
+          actual="$(git rev-parse HEAD)"
+          test "$actual" = "$expected"
+          npm install --no-audit --no-fund --package-lock=false
+          npm run verify:source
+          npm run verify:worldclass
+          npm run verify:final-experience
+          npm run lint
+          VEAST_RELEASE_SHA="$actual" npm run build
+
+      - name: Create exact tracked-source ZIP
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/veast-final
+          git rev-parse HEAD > /tmp/veast-final/GITHUB_COMMIT.txt
+          git archive \
+            --format=zip \
+            --prefix=V_East_Corporate_Website_FINAL_GITHUB_548d9cd/ \
+            --output=/tmp/veast-final/V_East_FINAL_SEND_TO_FRIEND_GITHUB_548d9cd_20260925.zip \
+            HEAD
+          cd /tmp/veast-final
+          sha256sum V_East_FINAL_SEND_TO_FRIEND_GITHUB_548d9cd_20260925.zip > V_East_FINAL_SEND_TO_FRIEND_GITHUB_548d9cd_20260925_SHA256.txt
+          unzip -t V_East_FINAL_SEND_TO_FRIEND_GITHUB_548d9cd_20260925.zip
+
+      - name: Upload exact final package
+        uses: actions/upload-artifact@v7
+        with:
+          name: veast-final-exact-548d
+          path: |
+            /tmp/veast-final/GITHUB_COMMIT.txt
+            /tmp/veast-final/V_East_FINAL_SEND_TO_FRIEND_GITHUB_548d9cd_20260925.zip
+            /tmp/veast-final/V_East_FINAL_SEND_TO_FRIEND_GITHUB_548d9cd_20260925_SHA256.txt
+          compression-level: 0
+          if-no-files-found: error
