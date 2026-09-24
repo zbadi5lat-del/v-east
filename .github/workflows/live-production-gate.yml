@@ -1,0 +1,208 @@
+name: V.East live production verification
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - ".qa/LIVE_PROBE"
+
+permissions:
+  contents: read
+
+jobs:
+  live:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 12
+    steps:
+      - name: Resolve verified production URL
+        shell: bash
+        run: |
+          set -euo pipefail
+          candidates=(
+            "https://v-east-support-lint.vercel.app"
+            "https://v-east.vercel.app"
+            "https://v-east-git-main-support-lint.vercel.app"
+          )
+          : > /tmp/probe-summary.txt
+          found=""
+          for url in "${candidates[@]}"; do
+            safe=$(echo "$url" | tr -cd '[:alnum:]')
+            body="/tmp/body-${safe}.html"
+            meta=$(curl -L --silent --show-error --max-time 20               -o "$body" -w '%{http_code}|%{url_effective}|%{content_type}' "$url" || true)
+            echo "$url => $meta" | tee -a /tmp/probe-summary.txt
+            code="${meta%%|*}"
+            if [[ "$code" =~ ^2[0-9][0-9]$ ]] && grep -Eiq 'V[.]?EAST|Sports[[:space:]]*&[[:space:]]*Tourism|إدارة وتشغيل' "$body"; then
+              effective=$(echo "$meta" | cut -d'|' -f2)
+              found="$effective"
+              break
+            fi
+          done
+          cat /tmp/probe-summary.txt
+          if [[ -z "$found" ]]; then
+            echo "::error::No public production alias returned the V.East application."
+            exit 1
+          fi
+          printf '%s\n' "$found" > /tmp/live-url.txt
+          echo "LIVE_URL=$found" >> "$GITHUB_ENV"
+          echo "Verified live URL: $found"
+
+      - name: Install browser driver only
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/live-e2e
+          cd /tmp/live-e2e
+          npm init -y >/dev/null
+          npm install --no-audit --no-fund playwright-core@1.55.0
+          command -v google-chrome || command -v chromium || command -v chromium-browser
+
+      - name: Live browser E2E
+        shell: bash
+        run: |
+          set -euo pipefail
+          cat > /tmp/live-e2e/check.mjs <<'NODE'
+          import { chromium } from 'playwright-core';
+          import fs from 'node:fs/promises';
+
+          const url = process.env.LIVE_URL;
+          const chrome = process.env.CHROME_PATH || '/usr/bin/google-chrome';
+          const results = { url, checks: [], consoleErrors: [] };
+          const pass = (name, detail='') => { results.checks.push({name, pass:true, detail}); console.log('PASS', name, detail); };
+          const fail = (name, detail='') => { results.checks.push({name, pass:false, detail}); throw new Error(name + (detail ? ': ' + detail : '')); };
+          const assert = (cond, name, detail='') => cond ? pass(name, detail) : fail(name, detail);
+
+          const browser = await chromium.launch({headless:true, executablePath:chrome,args:['--no-sandbox','--disable-dev-shm-usage']});
+          try {
+            const context = await browser.newContext({viewport:{width:1440,height:1000}});
+            const page = await context.newPage();
+            page.on('console', msg => { if(msg.type()==='error') results.consoleErrors.push(msg.text()); });
+            page.on('pageerror', err => results.consoleErrors.push('PAGEERROR: '+err.message));
+
+            const resp=await page.goto(url,{waitUntil:'networkidle',timeout:30000});
+            assert(resp && resp.ok(),'desktop document HTTP 2xx',String(resp?.status()));
+            await page.waitForTimeout(3800);
+            assert((await page.locator('body').innerText()).includes('V.EAST'),'brand renders');
+            assert(await page.locator('h1').count()===1,'exactly one H1');
+            assert(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+2),'desktop no horizontal overflow');
+            await page.screenshot({path:'/tmp/live-e2e/desktop.png',fullPage:false});
+
+            const initialTheme=await page.evaluate(()=>document.documentElement.dataset.theme||'');
+            await page.locator('[role="switch"]').first().click();
+            await page.waitForTimeout(250);
+            const changedTheme=await page.evaluate(()=>document.documentElement.dataset.theme||'');
+            assert(initialTheme!==changedTheme,'theme toggle changes real root theme',initialTheme+' -> '+changedTheme);
+
+            const enButtons=page.locator('button').filter({hasText:/^EN$/});
+            let enClicked=false;
+            for(let i=0;i<await enButtons.count();i++){
+              const b=enButtons.nth(i);
+              if(await b.isVisible()){await b.click();enClicked=true;break;}
+            }
+            assert(enClicked,'visible EN language control found');
+            await page.waitForTimeout(250);
+            assert(await page.evaluate(()=>document.documentElement.lang==='en'&&document.documentElement.dir==='ltr'),'English sets lang=en and dir=ltr');
+
+            await page.evaluate(()=>scrollTo(0,900));
+            await page.waitForTimeout(350);
+            assert(await page.locator('.site-header').evaluate(el=>el.classList.contains('is-hidden')||el.classList.contains('is-going-down')),'header reacts to downward scroll');
+            await page.evaluate(()=>scrollTo(0,250));
+            await page.waitForTimeout(350);
+            assert(await page.locator('.site-header').evaluate(el=>!el.classList.contains('is-hidden')&&el.classList.contains('is-going-up')),'header restores on upward scroll');
+
+            await page.locator('#places').scrollIntoViewIfNeeded();
+            await page.waitForTimeout(250);
+            const triggers=page.locator('[aria-haspopup="dialog"]');
+            assert(await triggers.count()>=2,'featured-place dialog triggers present',String(await triggers.count()));
+            await triggers.nth(0).click();
+            assert(await page.locator('[role="dialog"]').count()>=1,'featured-place dialog opens');
+            await page.keyboard.press('Escape');
+            await page.waitForTimeout(150);
+            assert(await page.locator('[role="dialog"]').count()===0,'featured-place dialog closes with Escape');
+
+            await page.evaluate(()=>scrollTo(0,Math.min(document.body.scrollHeight*0.62,document.body.scrollHeight-1200)));
+            await page.waitForTimeout(350);
+            const pdfToggle=page.locator('button[aria-controls="floating-pdf-panel"]');
+            if(await pdfToggle.count() && await pdfToggle.isVisible()) await pdfToggle.click();
+            await page.waitForTimeout(150);
+            const pdfLinks=page.locator('a[href$=".pdf"]');
+            assert(await pdfLinks.count()===3,'three real PDF download links',String(await pdfLinks.count()));
+            for(let i=0;i<3;i++){
+              const href=await pdfLinks.nth(i).getAttribute('href');
+              const absolute=new URL(href,url).href;
+              const r=await context.request.get(absolute,{timeout:20000});
+              const buf=await r.body();
+              assert(r.ok(),`PDF ${i+1} HTTP 2xx`,String(r.status()));
+              assert(buf.subarray(0,5).toString()==='%PDF-',`PDF ${i+1} has PDF header`,String(buf.length));
+            }
+            assert(!(await page.locator('body').innerText()).toLowerCase().includes('save this page as pdf'),'Save-as-PDF UI removed');
+
+            await page.locator('#contact-section').scrollIntoViewIfNeeded();
+            await page.waitForTimeout(450);
+            const floatingState=await page.evaluate(()=>{
+              const a=document.querySelector('.floating-resources');
+              const w=document.querySelector('.floating-contact:not(.floating-contact--resources)');
+              const s=el=>el?{opacity:getComputedStyle(el).opacity,pointer:getComputedStyle(el).pointerEvents}:null;
+              return {resources:s(a),whatsapp:s(w)};
+            });
+            assert(floatingState.resources&&(floatingState.resources.pointer==='none'||Number(floatingState.resources.opacity)<0.1),'PDF control does not cover contact section',JSON.stringify(floatingState.resources));
+            assert(floatingState.whatsapp&&(floatingState.whatsapp.pointer==='none'||Number(floatingState.whatsapp.opacity)<0.1),'WhatsApp does not cover contact section',JSON.stringify(floatingState.whatsapp));
+            await page.screenshot({path:'/tmp/live-e2e/contact.png',fullPage:false});
+
+            const hrefs=await page.locator('a[href^="#"]').evaluateAll(as=>[...new Set(as.map(a=>a.getAttribute('href')).filter(Boolean))]);
+            const bad=[];
+            for(const href of hrefs){
+              if(href==='#') continue;
+              const ok=await page.evaluate(h=>!!document.getElementById(h.slice(1)),href);
+              if(!ok) bad.push(href);
+            }
+            assert(bad.length===0,'all internal anchors resolve',bad.join(','));
+
+            const mobile=await browser.newContext({viewport:{width:390,height:844}});
+            const mp=await mobile.newPage();
+            mp.on('console',msg=>{if(msg.type()==='error')results.consoleErrors.push('MOBILE: '+msg.text());});
+            mp.on('pageerror',err=>results.consoleErrors.push('MOBILE PAGEERROR: '+err.message));
+            await mp.goto(url,{waitUntil:'networkidle',timeout:30000});
+            await mp.waitForTimeout(3800);
+            assert(await mp.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+2),'mobile no horizontal overflow');
+            await mp.locator('#mobile-navigation-toggle').click();
+            await mp.waitForTimeout(100);
+            assert(await mp.locator('#mobile-navigation').getAttribute('aria-hidden')==='false','mobile drawer opens');
+            await mp.keyboard.press('Escape');
+            await mp.waitForTimeout(100);
+            assert(await mp.locator('#mobile-navigation').getAttribute('aria-hidden')==='true','mobile drawer closes with Escape');
+            await mp.screenshot({path:'/tmp/live-e2e/mobile.png',fullPage:false});
+            await mobile.close();
+
+            const reduced=await browser.newContext({viewport:{width:1440,height:900},reducedMotion:'reduce'});
+            const rp=await reduced.newPage();
+            await rp.goto(url,{waitUntil:'networkidle',timeout:30000});
+            await rp.waitForTimeout(400);
+            await rp.evaluate(()=>scrollTo(0,700));
+            await rp.waitForTimeout(100);
+            const transform=await rp.locator('.hero-copy-scroll').evaluate(el=>getComputedStyle(el).transform);
+            assert(transform==='none'||transform==='matrix(1, 0, 0, 1, 0, 0)','reduced-motion suppresses hero parallax',transform);
+            await reduced.close();
+
+            assert(results.consoleErrors.length===0,'no browser console/page errors',results.consoleErrors.join(' | '));
+            await context.close();
+          } finally {
+            await browser.close();
+            await fs.writeFile('/tmp/live-e2e/results.json',JSON.stringify(results,null,2));
+          }
+          NODE
+          cd /tmp/live-e2e
+          node check.mjs
+
+      - name: Upload live evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: veast-live-evidence
+          path: |
+            /tmp/live-url.txt
+            /tmp/probe-summary.txt
+            /tmp/live-e2e/results.json
+            /tmp/live-e2e/desktop.png
+            /tmp/live-e2e/contact.png
+            /tmp/live-e2e/mobile.png
+          if-no-files-found: warn
