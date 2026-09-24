@@ -1,0 +1,80 @@
+name: V.East exact aa0f final package
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - ".github/workflows/final-package-aa0f.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  package:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - name: Checkout authoritative main
+        uses: actions/checkout@v7
+        with:
+          ref: main
+          fetch-depth: 1
+          persist-credentials: false
+
+      - name: Setup Node
+        uses: actions/setup-node@v7
+        with:
+          node-version: 22
+
+      - name: Install dependencies
+        run: npm install --no-audit --no-fund --package-lock=false
+
+      - name: Final source, security and build gates
+        shell: bash
+        run: |
+          set -euo pipefail
+          npm run verify:source
+          npm run verify:worldclass
+          npm run verify:final-experience
+          npm run lint
+          npm run build
+          npm install --package-lock-only --ignore-scripts --no-audit --no-fund
+          npm audit --audit-level=high
+          node - <<'NODE'
+          const fs=require('node:fs');
+          const config=JSON.parse(fs.readFileSync('vercel.json','utf8'));
+          const map=new Map((config.headers||[]).flatMap(r=>r.headers||[]).map(({key,value})=>[key.toLowerCase(),value]));
+          for(const key of ['x-content-type-options','referrer-policy','x-frame-options','permissions-policy','x-permitted-cross-domain-policies','content-security-policy']){
+            if(!map.get(key)) throw new Error('Missing security header '+key);
+          }
+          console.log('Security headers PASS');
+          NODE
+
+      - name: Create exact tracked-source package
+        shell: bash
+        run: |
+          set -euo pipefail
+          expected="aa0f3ba7c670607c22fe58fb4ee3eec33b187b28"
+          actual="$(git rev-parse HEAD)"
+          test "$actual" = "$expected"
+          mkdir -p /tmp/veast-final-package
+          printf '%s\n' "$actual" > /tmp/veast-final-package/GITHUB_COMMIT.txt
+          git archive \
+            --format=zip \
+            --prefix=V_East_Corporate_Website_FINAL_GITHUB_aa0f3ba7/ \
+            --output=/tmp/veast-final-package/V_East_FINAL_SEND_TO_FRIEND_GITHUB_aa0f3ba7_20260925.zip \
+            HEAD
+          cd /tmp/veast-final-package
+          sha256sum V_East_FINAL_SEND_TO_FRIEND_GITHUB_aa0f3ba7_20260925.zip > V_East_FINAL_SEND_TO_FRIEND_GITHUB_aa0f3ba7_20260925_SHA256.txt
+          unzip -t V_East_FINAL_SEND_TO_FRIEND_GITHUB_aa0f3ba7_20260925.zip
+
+      - name: Upload exact final package
+        uses: actions/upload-artifact@v4
+        with:
+          name: veast-exact-aa0f-current-main
+          path: |
+            /tmp/veast-final-package/GITHUB_COMMIT.txt
+            /tmp/veast-final-package/V_East_FINAL_SEND_TO_FRIEND_GITHUB_aa0f3ba7_20260925.zip
+            /tmp/veast-final-package/V_East_FINAL_SEND_TO_FRIEND_GITHUB_aa0f3ba7_20260925_SHA256.txt
+          compression-level: 0
+          if-no-files-found: error
