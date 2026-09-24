@@ -40,8 +40,15 @@ for(const[l,t]of cases)for(const[w,h]of widths){
  const panel=await p.locator('#floating-pdf-panel').evaluate(el=>{const s=getComputedStyle(el),links=[...el.querySelectorAll('a[href$=".pdf"]')],title=el.querySelector('.floating-resources__title'),eye=el.querySelector('.floating-resources__eyebrow');return{opacity:+s.opacity,pointer:s.pointerEvents,links:links.length,title:title?getComputedStyle(title).color:'',eyebrow:eye?getComputedStyle(eye).color:''}});
  A(panel.opacity>.9&&panel.pointer!=='none'&&panel.links===3,'PDF panel opens with three downloads',{l,t,w,...panel});
  if(t==='light')A(panel.title==='rgb(16, 42, 51)'&&panel.eyebrow==='rgb(118, 85, 34)','light PDF panel readable',{l,w,...panel});
- await p.keyboard.press('Escape');await S(100);
- if(l==='en'&&t==='light'&&[390,768].includes(w))await p.screenshot({path:`/tmp/responsive-motion/places-pdf-${w}.png`,fullPage:false});
+ await p.keyboard.press('Escape');await S(340);
+ if(l==='en'&&t==='light'&&[390,768].includes(w)){
+   await p.screenshot({path:`/tmp/responsive-motion/places-pdf-${w}.png`,fullPage:false});
+   await places.locator('.place-card').first().click();await S(360);
+   const pm=await p.locator('#place-profile-dialog').evaluate(el=>{const r=el.getBoundingClientRect(),title=el.querySelector('h3')?.textContent?.trim()||'';return{title,in:r.left>=-2&&r.right<=innerWidth+2&&r.top>=-2&&r.bottom<=innerHeight+2,visible:getComputedStyle(el).opacity>.95}});
+   A(pm.title.length>0&&pm.in&&pm.visible,'venue profile opens from logo tile',{l,t,w,...pm});
+   await p.screenshot({path:`/tmp/responsive-motion/place-modal-${w}.png`,fullPage:false});
+   await p.keyboard.press('Escape');await S(340);
+ }
  const pillars=p.locator('#pillars');await pillars.scrollIntoViewIfNeeded();await S(180);
  if(t==='light'){const pc=await pillars.locator('.dark-feature-card').first().evaluate(el=>{const h=el.querySelector('h3'),q=el.querySelector('p'),s=getComputedStyle(el);return{bg:s.backgroundImage,title:h?getComputedStyle(h).color:'',body:q?getComputedStyle(q).color:''}});A(pc.bg.includes('linear-gradient')&&pc.title==='rgb(16, 42, 51)'&&pc.body==='rgb(82, 103, 107)','light pillars readable',{l,w,...pc});}
  if(l==='en'&&t==='light'&&[390,768].includes(w))await p.screenshot({path:`/tmp/responsive-motion/pillars-${w}.png`,fullPage:false});
