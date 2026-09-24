@@ -71,6 +71,13 @@ export function SiteExperienceProvider({ children }: { children: ReactNode }) {
     setMeta('meta[name="theme-color"]', theme === 'dark' ? '#0B2936' : '#F4F1EA');
   }, [theme]);
 
+  useEffect(() => {
+    const frame = window.requestAnimationFrame(() => {
+      window.dispatchEvent(new Event('veast:experiencechange'));
+    });
+    return () => window.cancelAnimationFrame(frame);
+  }, [language, theme]);
+
   const setLanguage = (next: Language) => setLanguageState(next);
   const setTheme = (next: ThemeMode) => setThemeState(next);
 
