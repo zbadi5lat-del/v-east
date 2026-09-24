@@ -1539,6 +1539,96 @@ html[data-theme="light"] .site-entry__logo { box-shadow:0 14px 35px rgba(16,42,5
   position: relative;
 }
 
+.place-logo-grid {
+  perspective: 1000px;
+}
+
+.place-logo-card {
+  isolation: isolate;
+  background:
+    radial-gradient(circle at 50% 18%, rgba(26,113,140,.08), transparent 42%),
+    linear-gradient(180deg, #FFFFFF 0%, #FBFAF7 72%, #F1F5F2 100%);
+}
+
+.place-logo-card__halo {
+  position: absolute;
+  inset: 10% 16% auto;
+  height: 52%;
+  border-radius: 999px;
+  background: radial-gradient(circle, rgba(26,113,140,.12), rgba(126,167,164,.05) 46%, transparent 72%);
+  filter: blur(18px);
+  opacity: .72;
+  transform: translateY(8px) scale(.92);
+  transition: opacity 300ms ease, transform 360ms var(--ease-emphasized);
+}
+
+.place-logo-card__ring {
+  position: absolute;
+  top: 16%;
+  left: 50%;
+  width: 48%;
+  aspect-ratio: 1;
+  border: 1px solid rgba(26,113,140,.10);
+  border-radius: 999px;
+  transform: translateX(-50%) scale(.84);
+  opacity: .55;
+  transition: transform 420ms var(--ease-emphasized), opacity 300ms ease, border-color 300ms ease;
+}
+
+.place-logo-card:hover .place-logo-card__halo {
+  opacity: 1;
+  transform: translateY(0) scale(1.02);
+}
+
+.place-logo-card:hover .place-logo-card__ring {
+  border-color: rgba(26,113,140,.22);
+  opacity: .9;
+  transform: translateX(-50%) scale(1);
+}
+
+.place-logo-card__name,
+.place-logo-card__hint {
+  text-wrap: balance;
+}
+
+.place-logo-card:focus-visible {
+  outline: 3px solid #F4F1EA;
+  outline-offset: 3px;
+  box-shadow: 0 0 0 6px #0B2936, 0 28px 74px rgba(7,31,62,.13);
+}
+
+@media (max-width: 389px) {
+  .place-logo-grid { gap: 10px; }
+  .place-logo-card {
+    min-height: 184px !important;
+    border-radius: 22px !important;
+    padding-inline: 10px !important;
+  }
+  .place-logo-card__mark {
+    width: 88px !important;
+    height: 88px !important;
+    border-radius: 24px !important;
+    padding: 10px !important;
+  }
+  .place-logo-card__name {
+    margin-top: 14px !important;
+    font-size: 1rem !important;
+  }
+  .place-logo-card__hint {
+    font-size: 8px !important;
+    letter-spacing: .10em !important;
+  }
+}
+
+@media (hover: none), (pointer: coarse) {
+  .place-logo-card:hover {
+    transform: none;
+  }
+  .place-logo-card:hover .place-logo-card__mark {
+    transform: none;
+  }
+}
+
 .place-card__visual {
   isolation: isolate;
 }
@@ -2136,7 +2226,23 @@ html[dir="rtl"] .floating-resources__panel { transform-origin: bottom right; }
 .floating-resources__download { flex:0 0 auto; color:#7EA7A4; }
 
 html[data-theme="light"] .floating-contact--resources,
-html[data-theme="light"] .floating-resources__panel { background:rgba(247,244,237,.97); border-color:rgba(23,103,130,.15); box-shadow:0 22px 54px rgba(24,65,73,.16); }
+html[data-theme="light"] .floating-resources__panel { background:rgba(247,244,237,.98); border-color:rgba(23,103,130,.22); box-shadow:0 22px 54px rgba(24,65,73,.18); }
+html[data-theme="light"] .floating-contact--resources {
+  color:#102A33 !important;
+  background:rgba(255,255,255,.97);
+  border-color:rgba(23,103,130,.24);
+  box-shadow:0 14px 34px rgba(16,42,51,.16), inset 0 0 0 1px rgba(255,255,255,.72);
+}
+html[data-theme="light"] .floating-contact--resources:hover {
+  border-color:rgba(23,103,130,.38);
+  background:#FFFFFF;
+  box-shadow:0 18px 42px rgba(16,42,51,.19);
+}
+html[data-theme="light"] .floating-contact--resources svg { color:#176782; }
+html[data-theme="light"] .floating-contact--resources .floating-contact__label { color:#102A33; }
+html[data-theme="light"] .floating-resources__eyebrow { color:#765522; }
+html[data-theme="light"] .floating-resources__icon { color:#176782; background:rgba(23,103,130,.10); }
+html[data-theme="light"] .floating-resources__download { color:#176782; }
 html[data-theme="light"] .floating-resources__title { color:#102A33; }
 html[data-theme="light"] .floating-resources__close,
 html[data-theme="light"] .floating-resources__action { background:rgba(255,255,255,.54); border-color:rgba(23,103,130,.11); color:#102A33; }
