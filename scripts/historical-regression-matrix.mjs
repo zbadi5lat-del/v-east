@@ -247,10 +247,17 @@ async function testDesktop() {
   assert(await trigger.evaluate((el) => document.activeElement === el), 'venue modal returns focus to trigger');
 
   // PDF launcher/panel after multiple experience changes.
-  await page.evaluate(() => scrollTo(0, Math.min(document.body.scrollHeight * .58, document.body.scrollHeight - 1200)));
-  await sleep(450);
+  // Move to a known mid-page section where the launcher is intentionally interactive;
+  // Playwright's isVisible() ignores opacity/pointer-events, so verify real hit-test state.
+  await page.locator('#services').scrollIntoViewIfNeeded();
+  await sleep(650);
   const pdfToggle = page.locator('button[aria-controls="floating-pdf-panel"]');
-  assert(await pdfToggle.isVisible(), 'PDF launcher visible');
+  const pdfLauncherState = await pdfToggle.evaluate((element) => ({
+    opacity: Number.parseFloat(getComputedStyle(element.closest('.floating-resources')).opacity || '1'),
+    pointer: getComputedStyle(element).pointerEvents,
+    expanded: element.getAttribute('aria-expanded'),
+  }));
+  assert(pdfLauncherState.opacity > .9 && pdfLauncherState.pointer !== 'none', 'PDF launcher is visibly interactive mid-page', JSON.stringify(pdfLauncherState));
   await pdfToggle.click();
   await sleep(360);
   assert(await page.locator('#floating-pdf-panel a[href$=".pdf"]').count() === 3, 'PDF panel contains 3 downloads');
