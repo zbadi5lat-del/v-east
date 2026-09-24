@@ -8,6 +8,7 @@ interface FloatingWhatsAppProps { selectedFacility: FacilityType | null; }
 export function FloatingWhatsApp({selectedFacility}:FloatingWhatsAppProps){
   const [visible,setVisible]=useState(false);
   const [resourcesOpen,setResourcesOpen]=useState(false);
+  const resourcesVisible=visible&&resourcesOpen;
   const {copy}=useSiteExperience();
   const facilityIndex=selectedFacility?FACILITIES.indexOf(selectedFacility):-1;
   const label=facilityIndex>=0?copy.facilities[facilityIndex]:null;
@@ -38,8 +39,8 @@ export function FloatingWhatsApp({selectedFacility}:FloatingWhatsAppProps){
   },[resourcesOpen]);
 
   return <>
-    <div className={`floating-resources fixed bottom-[max(18px,env(safe-area-inset-bottom))] [inset-inline-start:18px] z-40 flex flex-col items-start gap-3 transition-[opacity,transform] duration-300 ${visible?'pointer-events-auto translate-y-0 opacity-100':'pointer-events-none translate-y-4 opacity-0'}`}>
-      <section id="floating-pdf-panel" className={`floating-resources__panel ${resourcesOpen?'is-open':'is-closed'}`} aria-label={copy.resources.panelLabel} aria-hidden={!resourcesOpen} inert={!resourcesOpen}>
+    <div className={`floating-resources pointer-events-none fixed bottom-[max(18px,env(safe-area-inset-bottom))] [inset-inline-start:18px] z-40 flex flex-col items-start gap-3 transition-[opacity,transform] duration-300 ${visible?'translate-y-0 opacity-100':'translate-y-4 opacity-0'}`}>
+      <section id="floating-pdf-panel" className={`floating-resources__panel ${resourcesVisible?'is-open pointer-events-auto':'is-closed pointer-events-none'}`} aria-label={copy.resources.panelLabel} aria-hidden={!resourcesVisible} inert={!resourcesVisible}>
         <div className="floating-resources__panel-head">
           <div><span className="floating-resources__eyebrow">PDF LIBRARY</span><strong className="floating-resources__title">{copy.resources.title}</strong></div>
           <button type="button" onClick={()=>setResourcesOpen(false)} className="floating-resources__close" aria-label={copy.resources.close}><X aria-hidden="true" className="h-4 w-4"/></button>
@@ -57,7 +58,7 @@ export function FloatingWhatsApp({selectedFacility}:FloatingWhatsAppProps){
           })}
         </div>
       </section>
-      <button type="button" aria-expanded={resourcesOpen} aria-controls="floating-pdf-panel" aria-label={copy.resources.cta} onClick={()=>setResourcesOpen(value=>!value)} className="floating-contact floating-contact--resources flex h-14 min-w-14 items-center justify-center gap-2 rounded-2xl px-4 text-white">
+      <button type="button" aria-expanded={resourcesOpen} aria-controls="floating-pdf-panel" aria-label={copy.resources.cta} onClick={()=>setResourcesOpen(value=>!value)} className={`floating-contact floating-contact--resources flex h-14 min-w-14 items-center justify-center gap-2 rounded-2xl px-4 text-white ${visible?'pointer-events-auto':'pointer-events-none'}`}>
         <FileText aria-hidden="true" className="h-6 w-6"/>
         <span className="floating-contact__label text-sm font-bold">{copy.resources.cta}</span>
       </button>
