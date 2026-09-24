@@ -1,0 +1,84 @@
+name: V.East experience toggle visibility regression
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - "src/hooks/useScrollReveal.ts"
+      - "src/siteExperience.tsx"
+      - "src/components/**"
+      - "scripts/experience-toggle-regression.mjs"
+      - ".github/workflows/experience-toggle-regression.yml"
+  push:
+    branches: [main]
+    paths:
+      - "src/hooks/useScrollReveal.ts"
+      - "src/siteExperience.tsx"
+      - "src/components/**"
+      - "scripts/experience-toggle-regression.mjs"
+      - ".github/workflows/experience-toggle-regression.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  regression:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 12
+    steps:
+      - name: Checkout candidate source
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Install project dependencies
+        run: npm install --no-audit --no-fund --package-lock=false
+
+      - name: Source build gates
+        run: |
+          set -euo pipefail
+          npm run verify:source
+          npm run verify:worldclass
+          npm run verify:final-experience
+          npm run lint
+          npm run build
+
+      - name: Install browser driver library
+        run: npm install --no-audit --no-fund --no-save --package-lock=false playwright-core@1.55.0
+
+      - name: Start production preview
+        shell: bash
+        run: |
+          set -euo pipefail
+          npm run preview -- --port 4173 > /tmp/veast-preview.log 2>&1 &
+          echo $! > /tmp/veast-preview.pid
+          for attempt in {1..30}; do
+            if curl --silent --fail http://127.0.0.1:4173/ >/dev/null; then
+              exit 0
+            fi
+            sleep 1
+          done
+          cat /tmp/veast-preview.log
+          exit 1
+
+      - name: Theme and language visibility regression
+        shell: bash
+        run: |
+          set -euo pipefail
+          CHROME_PATH="$(command -v google-chrome || command -v chromium || command -v chromium-browser)"
+          PREVIEW_URL="http://127.0.0.1:4173" CHROME_PATH="$CHROME_PATH" node scripts/experience-toggle-regression.mjs
+
+      - name: Preview log
+        if: always()
+        run: cat /tmp/veast-preview.log || true
+
+      - name: Stop preview
+        if: always()
+        shell: bash
+        run: |
+          if [ -f /tmp/veast-preview.pid ]; then
+            kill "$(cat /tmp/veast-preview.pid)" 2>/dev/null || true
+          fi
