@@ -138,3 +138,5 @@ try {
 } finally {
   await browser.close();
 }
+
+// final-loop verification probe 2026-09-24T23:01+03
