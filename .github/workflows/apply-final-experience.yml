@@ -5,6 +5,10 @@ on:
     branches: [main]
     paths:
       - ".source/APPLY_FINAL_PATCH"
+  pull_request:
+    branches: [main]
+    paths:
+      - ".source/APPLY_FINAL_PATCH"
 
 permissions:
   contents: write
@@ -14,9 +18,10 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
-      - name: Checkout exact pushed state
+      - name: Checkout authoritative main state
         uses: actions/checkout@v4
         with:
+          ref: main
           fetch-depth: 0
 
       - name: Setup Node
