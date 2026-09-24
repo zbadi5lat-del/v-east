@@ -38,15 +38,25 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          cat .source/final-text-patch.xz.b64.part00 \
-              .source/final-text-patch.xz.b64.part01 \
-              .source/final-text-patch.xz.b64.part02 \
-              > /tmp/veast-final-text-patch.xz.b64
+
+          test "$(wc -c < .source/final-text-patch.xz.b64.r00)" -eq 17500
+          test "$(wc -c < .source/final-text-patch.xz.b64.r01a)" -eq 17500
+          test "$(wc -c < .source/final-text-patch.xz.b64.r02)" -eq 17496
+
+          echo "62d8b8996a12e3b611f0fa57f3dd3e73f2d038befc8d85cbfa5a60ee2c4d0b51  .source/final-text-patch.xz.b64.r00" | sha256sum -c -
+          echo "8166ffe25f33adeb96d81c0e68468ed2f8e203525171263678bb35a8aab941c0  .source/final-text-patch.xz.b64.r01a" | sha256sum -c -
+          echo "7bcd9a7dbf91f917613d2c6ae4a0712b679fb3639ca293b65f5bf586dcfbb807  .source/final-text-patch.xz.b64.r02" | sha256sum -c -
+
+          cat .source/final-text-patch.xz.b64.r00               .source/final-text-patch.xz.b64.r01a               .source/final-text-patch.xz.b64.r02               > /tmp/veast-final-text-patch.xz.b64
+
           test "$(wc -c < /tmp/veast-final-text-patch.xz.b64)" -eq 52496
           base64 -d /tmp/veast-final-text-patch.xz.b64 > /tmp/veast-final-text-patch.tar.xz
           echo "f784b89e9f65d524c423ff6b4fab9746b0311574075916c02abed7ea224bb732  /tmp/veast-final-text-patch.tar.xz" | sha256sum -c -
+          xz -t /tmp/veast-final-text-patch.tar.xz
+
           python - <<'PY'
           import tarfile
+
           allowed = {
             '.github/workflows/quality.yml',
             'package.json',
@@ -62,6 +72,7 @@ jobs:
             'src/components/Hero.tsx',
             'src/components/SiteEntrance.tsx',
           }
+
           with tarfile.open('/tmp/veast-final-text-patch.tar.xz', 'r:xz') as tf:
               members = [m for m in tf.getmembers() if m.isfile()]
               actual = {m.name.removeprefix('./') for m in members}
@@ -78,6 +89,28 @@ jobs:
         run: |
           python -m pip install --disable-pip-version-check weasyprint==68.0
           python scripts/generate-pdfs.py
+
+      - name: PDF preflight
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          files = [
+              Path("public/pdfs/V-EAST-Company-Profile.pdf"),
+              Path("public/pdfs/V-EAST-Services-Operations.pdf"),
+              Path("public/pdfs/V-EAST-Portfolio-Featured-Venues.pdf"),
+          ]
+
+          for path in files:
+              data = path.read_bytes()
+              if len(data) < 50_000:
+                  raise SystemExit(f"{path}: unexpectedly small ({len(data)} bytes)")
+              if not data.startswith(b"%PDF-"):
+                  raise SystemExit(f"{path}: missing PDF header")
+              if b"%%EOF" not in data[-2048:]:
+                  raise SystemExit(f"{path}: missing PDF EOF marker")
+              print(f"PDF PASS {path} {len(data)} bytes")
+          PY
 
       - name: Install frontend dependencies
         run: npm install --no-audit --no-fund --package-lock=false
@@ -105,6 +138,7 @@ jobs:
         run: |
           set -euo pipefail
           rm -rf dist node_modules .source
+          rm -f package-lock.json
           rm -f .github/workflows/apply-final-experience.yml
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
