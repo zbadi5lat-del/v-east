@@ -23,7 +23,7 @@ jobs:
       - name: Verify current source before packaging
         run: |
           set -euo pipefail
-          npm install --no-audit --no-fund --package-lock=false
+          npm ci --no-audit --no-fund
           npm run verify:source
           npm run verify:worldclass
           npm run verify:final-experience
@@ -44,7 +44,7 @@ jobs:
           unzip -t /tmp/veast-package/V_East_Corporate_Website_FINAL_GITHUB_20260924.zip
 
       - name: Upload exact GitHub source package
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: veast-exact-github-source
           path: |
