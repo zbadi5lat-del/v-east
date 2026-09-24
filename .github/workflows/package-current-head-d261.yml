@@ -1,4 +1,4 @@
-name: V.East exact current HEAD d261 package
+name: V.East exact current HEAD package
 
 on:
   pull_request:
@@ -15,36 +15,35 @@ jobs:
     timeout-minutes: 12
     steps:
       - name: Checkout authoritative current main
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           ref: main
           fetch-depth: 1
 
-      - name: Verify HEAD and package
+      - name: Package exact current HEAD
         shell: bash
         run: |
           set -euo pipefail
-          expected="d2615a6f934dc98888765e987e0342ea88ec0c07"
           actual="$(git rev-parse HEAD)"
-          test "$actual" = "$expected"
           mkdir -p /tmp/veast-final
           printf '%s\n' "$actual" > /tmp/veast-final/GITHUB_COMMIT.txt
           git archive \
             --format=zip \
             --prefix=V_East_Corporate_Website_FINAL_GLOBAL/ \
-            --output=/tmp/veast-final/V_East_FINAL_GLOBAL_GITHUB_d2615a6f_20260925.zip \
+            --output=/tmp/veast-final/V_East_FINAL_GLOBAL_CURRENT_HEAD_20260925.zip \
             HEAD
           cd /tmp/veast-final
-          sha256sum V_East_FINAL_GLOBAL_GITHUB_d2615a6f_20260925.zip > V_East_FINAL_GLOBAL_GITHUB_d2615a6f_20260925_SHA256.txt
-          unzip -t V_East_FINAL_GLOBAL_GITHUB_d2615a6f_20260925.zip
+          sha256sum V_East_FINAL_GLOBAL_CURRENT_HEAD_20260925.zip > V_East_FINAL_GLOBAL_CURRENT_HEAD_20260925_SHA256.txt
+          unzip -t V_East_FINAL_GLOBAL_CURRENT_HEAD_20260925.zip
+          echo "PACKAGED_COMMIT=$actual"
 
       - name: Upload exact current HEAD package
         uses: actions/upload-artifact@v4
         with:
-          name: veast-current-head-d2615a6f
+          name: veast-current-head-exact
           path: |
             /tmp/veast-final/GITHUB_COMMIT.txt
-            /tmp/veast-final/V_East_FINAL_GLOBAL_GITHUB_d2615a6f_20260925.zip
-            /tmp/veast-final/V_East_FINAL_GLOBAL_GITHUB_d2615a6f_20260925_SHA256.txt
+            /tmp/veast-final/V_East_FINAL_GLOBAL_CURRENT_HEAD_20260925.zip
+            /tmp/veast-final/V_East_FINAL_GLOBAL_CURRENT_HEAD_20260925_SHA256.txt
           compression-level: 0
           if-no-files-found: error
