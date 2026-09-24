@@ -8,6 +8,7 @@ on:
       - "scripts/**"
       - "index.html"
       - "package.json"
+      - "package-lock.json"
       - "vercel.json"
       - ".github/workflows/**"
   push:
@@ -17,6 +18,7 @@ on:
       - "scripts/**"
       - "index.html"
       - "package.json"
+      - "package-lock.json"
       - "vercel.json"
       - ".github/workflows/**"
 
