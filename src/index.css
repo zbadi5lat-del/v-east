@@ -1844,6 +1844,12 @@ html[dir="rtl"] .site-header-progress__fill::after { right: auto; left: -3px; }
 
 .site-entry__scene { z-index: 0; }
 .site-entry__content { z-index: 4; }
+.site-entry__wordmark strong {
+  text-shadow: 0 2px 18px rgba(3,24,34,.38), 0 0 34px rgba(3,24,34,.20);
+}
+html[data-theme="light"] .site-entry__wordmark strong {
+  text-shadow: 0 1px 18px rgba(255,255,255,.64), 0 2px 28px rgba(16,42,51,.10);
+}
 .site-entry__markers { z-index: 2; }
 .site-entry__horizon,
 .site-entry__sweep { z-index: 1; }
@@ -1869,10 +1875,32 @@ html[dir="rtl"] .site-header-progress__fill::after { right: auto; left: -3px; }
   filter: drop-shadow(0 -20px 48px rgba(7,27,36,.32)) drop-shadow(0 16px 42px rgba(5,29,43,.18));
 }
 
-.site-entry__ocean-back { fill: rgba(53,149,177,.42); }
-.site-entry__ocean-mid { fill: rgba(19,103,132,.66); }
-.site-entry__ocean-front { fill: rgba(8,51,71,.94); }
-.site-entry__ocean-crest { opacity: .82; }
+.site-entry__water-surface {
+  filter: url(#veast-water-organic);
+}
+
+.site-entry__foam-organic {
+  filter: url(#veast-foam-organic);
+}
+
+.site-entry__ocean-glaze {
+  opacity: .72;
+  mix-blend-mode: screen;
+}
+
+.site-entry__caustics {
+  fill: none;
+  stroke: rgba(194,232,233,.16);
+  stroke-width: 2;
+  stroke-linecap: round;
+  vector-effect: non-scaling-stroke;
+  opacity: .66;
+}
+
+.site-entry__ocean-back { fill: url(#veast-ocean-back); }
+.site-entry__ocean-mid { fill: url(#veast-ocean-mid); }
+.site-entry__ocean-front { fill: url(#veast-ocean-front); }
+.site-entry__ocean-crest { opacity: .58; }
 .site-entry__ocean-foam,
 .site-entry__ocean-ripple {
   fill: none;
@@ -1893,6 +1921,7 @@ html[dir="rtl"] .site-header-progress__fill::after { right: auto; left: -3px; }
   opacity: .75;
 }
 .site-entry__ocean-ripple--two { stroke: rgba(126,167,164,.22); stroke-width: 2.1; opacity: .58; }
+.site-entry__caustics path:nth-child(2n) { opacity: .52; stroke-width: 1.5; }
 
 .site-entry__spray {
   position: absolute;
@@ -2017,7 +2046,7 @@ html[data-theme="light"] .site-header.is-scrolled .site-header__inner {
   box-shadow: 0 18px 48px rgba(24,65,73,.16), 0 0 0 1px rgba(23,103,130,.04);
 }
 html[data-theme="light"] .site-header-progress { background: rgba(23,103,130,.09); }
-html[data-theme="light"] .site-entry__ocean-back { fill: rgba(106,173,181,.44); }
+html[data-theme="light"] .site-entry__ocean-back { fill: url(#veast-ocean-back); opacity: .82; }
 
 .floating-contact {
   border: 1px solid rgba(255,255,255,.10);
@@ -2095,8 +2124,8 @@ html[data-theme="light"] .floating-resources__content small { color:#52676B; }
   .floating-resources__panel { width:min(300px, calc(100vw - 24px)); }
 }
 
-html[data-theme="light"] .site-entry__ocean-mid { fill: rgba(65,137,153,.58); }
-html[data-theme="light"] .site-entry__ocean-front { fill: rgba(26,88,105,.82); }
+html[data-theme="light"] .site-entry__ocean-mid { fill: url(#veast-ocean-mid); opacity: .78; }
+html[data-theme="light"] .site-entry__ocean-front { fill: url(#veast-ocean-front); opacity: .86; }
 html[data-theme="light"] .site-entry__ocean-foam { stroke: rgba(247,250,246,.84); }
 html[data-theme="light"] .site-entry__ocean-foam--two { stroke: rgba(210,188,138,.52); }
 html[data-theme="light"] .site-entry__ocean-ripple { stroke: rgba(34,122,139,.18); }
@@ -2110,11 +2139,11 @@ html[data-theme="light"] .site-entry__ocean-ripple--two { stroke: rgba(65,137,15
   }
   .site-header-spacer { height: calc(80px + env(safe-area-inset-top)); }
   .site-entry__ocean {
-    top: 22%;
-    left: -38%;
-    width: 176%;
-    height: 62%;
-    min-height: 320px;
+    top: 27%;
+    left: -34%;
+    width: 168%;
+    height: 58%;
+    min-height: 310px;
   }
 }
 
@@ -2199,6 +2228,13 @@ html[data-theme="light"] .site-entry__ocean-ripple--two { stroke: rgba(65,137,15
   transform-origin: 50% 100%;
 }
 
+.site-entry__water-surface,
+.site-entry__foam-organic,
+.site-entry__caustics {
+  transform-box: fill-box;
+  transform-origin: 50% 100%;
+}
+
 .site-entry__ocean-back,
 .site-entry__ocean-mid,
 .site-entry__ocean-front,
@@ -2214,7 +2250,7 @@ html[data-theme="light"] .site-entry__ocean-ripple--two { stroke: rgba(65,137,15
 .site-entry__ocean-foam--two { stroke: rgba(236,245,241,.66); stroke-width: 3.4; stroke-dasharray: 11 16 36 10 7 21 48 13; }
 .site-entry__ocean-foam--three { stroke: rgba(242,249,246,.50); stroke-width: 2.4; stroke-dasharray: 7 12 28 16 5 18 35 11; opacity: .62; }
 .site-entry__foam-pockets { fill: rgba(240,248,245,.50); opacity: 0; }
-.site-entry__foam-pockets ellipse:nth-child(2n) { fill: rgba(210,232,230,.38); }
+.site-entry__foam-pockets path:nth-child(2n) { fill: rgba(210,232,230,.38); }
 
 @media (prefers-reduced-motion: no-preference) {
   .site-entry__shore { animation: siteEntryShoreReveal 3600ms var(--ease-emphasized) 180ms both; }
@@ -2229,6 +2265,7 @@ html[data-theme="light"] .site-entry__ocean-ripple--two { stroke: rgba(65,137,15
   .site-entry__ocean-foam--two { animation: siteEntryFoamBreakTwo 2580ms ease-in-out 910ms both; }
   .site-entry__ocean-foam--three { animation: siteEntryFoamBreakThree 2280ms ease-in-out 1180ms both; }
   .site-entry__foam-pockets { animation: siteEntryFoamPockets 2120ms ease-in-out 1080ms both; }
+  .site-entry__caustics { animation: siteEntryCaustics 2440ms ease-in-out 860ms both; }
 
   @keyframes siteEntryShoreReveal {
     0% { opacity: 0; transform: translate3d(0,16%,0) scaleY(.94); }
@@ -2306,6 +2343,13 @@ html[data-theme="light"] .site-entry__ocean-ripple--two { stroke: rgba(65,137,15
     79% { opacity: .48; transform: translate3d(0,4%,0) scale(1.01); }
     100% { opacity: 0; transform: translate3d(0,-5%,0) scale(.86); }
   }
+
+  @keyframes siteEntryCaustics {
+    0%, 100% { opacity: .10; transform: translate3d(0,-2%,0) scaleX(.96); }
+    29% { opacity: .52; transform: translate3d(0,3%,0) scaleX(1.02); }
+    58% { opacity: .22; transform: translate3d(0,-1%,0) scaleX(.985); }
+    81% { opacity: .46; transform: translate3d(0,2%,0) scaleX(1.012); }
+  }
 }
 
 html[data-theme="light"] .site-entry__shore {
@@ -2321,8 +2365,12 @@ html[data-theme="light"] .site-entry__foam-pockets { fill: rgba(252,254,249,.60)
 
 @media (max-width: 767px) {
   .site-entry__shore { height: 31%; bottom: -3%; }
-  .site-entry__ocean-svg { filter: none; }
-  .site-entry__foam-pockets ellipse:nth-child(n+4),
+  .site-entry__ocean-svg,
+  .site-entry__water-surface,
+  .site-entry__foam-organic { filter: none; }
+  .site-entry__ocean-glaze { opacity: .5; mix-blend-mode: normal; }
+  .site-entry__caustics path:nth-child(n+4),
+  .site-entry__foam-pockets path:nth-child(n+4),
   .site-entry__spray--6,
   .site-entry__spray--7 { display: none; }
 }
