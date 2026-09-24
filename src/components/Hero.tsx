@@ -1,3 +1,4 @@
+import { useEffect, useRef } from 'react';
 import { ArrowDown, ArrowLeft, ClipboardCheck, ShieldCheck, UsersRound, Waves } from 'lucide-react';
 import { ASSETS } from '../content';
 import { useSiteExperience } from '../siteExperience';
@@ -8,12 +9,52 @@ const icons=[UsersRound,ClipboardCheck,ShieldCheck,Waves] as const;
 export function Hero({ onPrimaryCtaClick }: HeroProps) {
   const { copy, language } = useSiteExperience();
   const c = copy.hero;
+  const heroRef = useRef<HTMLElement | null>(null);
+
+  useEffect(() => {
+    const hero = heroRef.current;
+    if (!hero || window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+
+    let frame = 0;
+    let top = 0;
+    let height = 1;
+
+    const measure = () => {
+      const rect = hero.getBoundingClientRect();
+      top = window.scrollY + rect.top;
+      height = Math.max(hero.offsetHeight, 1);
+    };
+
+    const paint = () => {
+      frame = 0;
+      const raw = (window.scrollY - top) / Math.max(height * 0.72, 1);
+      const progress = Math.min(1, Math.max(0, raw));
+      hero.style.setProperty('--hero-scroll', progress.toFixed(4));
+    };
+
+    const schedule = () => {
+      if (!frame) frame = requestAnimationFrame(paint);
+    };
+
+    const onResize = () => { measure(); schedule(); };
+    measure();
+    paint();
+    window.addEventListener('scroll', schedule, { passive: true });
+    window.addEventListener('resize', onResize, { passive: true });
+    return () => {
+      cancelAnimationFrame(frame);
+      window.removeEventListener('scroll', schedule);
+      window.removeEventListener('resize', onResize);
+      hero.style.removeProperty('--hero-scroll');
+    };
+  }, []);
+
   return (
-    <section id="hero" className="hero-section relative w-full overflow-hidden border-b border-corp-border/40 bg-corp-navy">
+    <section ref={heroRef} id="hero" className="hero-section relative w-full overflow-hidden border-b border-corp-border/40 bg-corp-navy">
       <div className="hero-operations-grid" aria-hidden="true" />
       <div className="relative mx-auto max-w-7xl px-5 pb-16 pt-12 sm:px-8 sm:pt-16 lg:pb-24 lg:pt-20">
         <div className="grid grid-cols-1 items-center gap-12 lg:grid-cols-12 lg:gap-12">
-          <div className="relative z-10 flex flex-col gap-6 lg:col-span-7">
+          <div className="hero-copy-scroll relative z-10 flex flex-col gap-6 lg:col-span-7">
             <div className="hero-enter hero-enter--1 inline-flex w-fit items-center gap-2.5 rounded-full border border-corp-border bg-corp-navy-dark/70 px-3.5 py-2 backdrop-blur-sm">
               <span className="inline-flex h-2.5 w-2.5 rounded-full bg-corp-blue" aria-hidden="true" />
               <span className="font-cairo text-xs font-bold tracking-wide text-white">{c.eyebrow}</span>
@@ -35,7 +76,7 @@ export function Hero({ onPrimaryCtaClick }: HeroProps) {
               {c.scope.map(([label,value],index)=>{const Icon=icons[index]; return <div className="hero-scope-card" key={label}><div className="flex items-center gap-2 text-corp-sand"><Icon aria-hidden="true" className="h-4 w-4 shrink-0"/><span className="font-inter truncate text-[9px] font-bold uppercase tracking-[0.13em]">{label}</span></div><span className="mt-2 block text-[13px] font-bold leading-5 text-white sm:text-sm">{value}</span></div>})}
             </div>
           </div>
-          <div className="hero-enter hero-enter--visual relative lg:col-span-5">
+          <div className="hero-visual-scroll hero-enter hero-enter--visual relative lg:col-span-5">
             <div className="hero-media-frame relative mx-auto w-full max-w-[560px] lg:ms-auto">
               <div className="hero-media-main relative overflow-hidden rounded-[28px] border border-white/10 bg-corp-navy-dark shadow-[0_34px_90px_rgba(0,0,0,0.28)]">
                 <img src={ASSETS.hero} width={925} height={525} alt={c.heroAlt} className="h-[320px] w-full object-cover sm:h-[410px] lg:h-[455px]" fetchPriority="high" decoding="async" />

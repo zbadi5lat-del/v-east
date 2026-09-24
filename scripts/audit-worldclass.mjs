@@ -69,7 +69,7 @@ check('no-animated-filter',!/filter\s*:\s*saturate/i.test(css),'No animated satu
 check('no-persistent-will-change',!/will-change\s*:/i.test(css),'No persistent will-change hints.');
 check('touch-hover-guard',css.includes('@media (hover: none), (pointer: coarse)'),'Touch devices avoid sticky hover movement.');
 check('content-linked-motion',source.includes('operating-flow__line')&&source.includes('data-reveal="image"')&&source.includes('hero-enter'),'Motion is tied to content hierarchy and operating flow.');
-check('short-branded-entrance',siteEntrance.includes('copy.entrance.scope')&&siteEntrance.includes('V.EAST')&&css.includes('siteEntryExit 1180ms'),'Entrance is short, branded, and localized.');
+check('cinematic-branded-entrance',siteEntrance.includes('copy.entrance.scope')&&siteEntrance.includes('site-entry__water')&&siteEntrance.includes('site-entry__markers')&&siteEntrance.includes('V.EAST')&&css.includes('siteEntryExit 3250ms')&&css.includes('@keyframes siteEntryLogo')&&css.includes('@keyframes siteEntryWaveFront'),'Entrance is a bounded branded micro-story with logo zoom-out, layered water, kinetic markers, localization, and a finite exit.');
 
 check('local-imagery',!/src="https?:\/\//i.test(source),'Rendered site imagery remains local.');
 check('intrinsic-images',[...source.matchAll(/<img\b[^>]*>/g)].every(m=>/\bwidth=/.test(m[0])&&/\bheight=/.test(m[0])),'Every image declares width and height.');
