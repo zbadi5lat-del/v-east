@@ -1,0 +1,62 @@
+name: V.East exact current-main final package
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - ".github/workflows/final-package-verification.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  package:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 12
+    steps:
+      - name: Checkout authoritative current main
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 1
+
+      - name: Install dependencies
+        run: npm install --no-audit --no-fund --package-lock=false
+
+      - name: Final source and build gates
+        run: |
+          set -euo pipefail
+          npm run verify:source
+          npm run verify:worldclass
+          npm run verify:final-experience
+          npm run lint
+          npm run build
+
+      - name: Create exact tracked-source package
+        shell: bash
+        run: |
+          set -euo pipefail
+          expected="9accf0522510e8e2fdd36e730e4283fac0c3f56c"
+          actual="$(git rev-parse HEAD)"
+          test "$actual" = "$expected"
+          mkdir -p /tmp/veast-final-package
+          printf '%s\n' "$actual" > /tmp/veast-final-package/GITHUB_COMMIT.txt
+          git archive \
+            --format=zip \
+            --prefix=V_East_Corporate_Website_FINAL_GITHUB_9accf052/ \
+            --output=/tmp/veast-final-package/V_East_FINAL_SEND_TO_FRIEND_GITHUB_9accf052_20260924.zip \
+            HEAD
+          cd /tmp/veast-final-package
+          sha256sum V_East_FINAL_SEND_TO_FRIEND_GITHUB_9accf052_20260924.zip > V_East_FINAL_SEND_TO_FRIEND_GITHUB_9accf052_20260924_SHA256.txt
+          unzip -t V_East_FINAL_SEND_TO_FRIEND_GITHUB_9accf052_20260924.zip
+
+      - name: Upload final exact package
+        uses: actions/upload-artifact@v4
+        with:
+          name: veast-final-exact-current-main
+          path: |
+            /tmp/veast-final-package/GITHUB_COMMIT.txt
+            /tmp/veast-final-package/V_East_FINAL_SEND_TO_FRIEND_GITHUB_9accf052_20260924.zip
+            /tmp/veast-final-package/V_East_FINAL_SEND_TO_FRIEND_GITHUB_9accf052_20260924_SHA256.txt
+          compression-level: 0
+          if-no-files-found: error
