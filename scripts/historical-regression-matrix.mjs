@@ -159,8 +159,8 @@ async function testDesktop() {
     reducedMotion: 'no-preference',
   });
   await context.addInitScript(() => {
-    localStorage.setItem('veast-language', 'ar');
-    localStorage.setItem('veast-theme', 'dark');
+    if (!localStorage.getItem('veast-language')) localStorage.setItem('veast-language', 'ar');
+    if (!localStorage.getItem('veast-theme')) localStorage.setItem('veast-theme', 'dark');
   });
   const page = await context.newPage();
   const errors = await collectErrors(page);
@@ -311,8 +311,8 @@ async function testMobile() {
     reducedMotion: 'no-preference',
   });
   await context.addInitScript(() => {
-    localStorage.setItem('veast-language', 'ar');
-    localStorage.setItem('veast-theme', 'dark');
+    if (!localStorage.getItem('veast-language')) localStorage.setItem('veast-language', 'ar');
+    if (!localStorage.getItem('veast-theme')) localStorage.setItem('veast-theme', 'dark');
   });
   const page = await context.newPage();
   const errors = await collectErrors(page);
