@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
+import { createContext, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { COPY, type Language, type ThemeMode } from './i18n';
 
 interface SiteExperienceValue {
@@ -11,6 +11,8 @@ interface SiteExperienceValue {
 }
 
 const SiteExperienceContext = createContext<SiteExperienceValue | null>(null);
+const REVEAL_SELECTOR = '[data-reveal]';
+const EXPERIENCE_CHANGE_EVENT = 'veast:experiencechange';
 
 function readLanguage(): Language {
   if (typeof window === 'undefined') return 'ar';
@@ -30,10 +32,44 @@ function setMeta(selector: string, value: string) {
   document.querySelector<HTMLMetaElement>(selector)?.setAttribute('content', value);
 }
 
+function revealElement(element: HTMLElement) {
+  element.dataset.revealed = 'true';
+  element.classList.add('is-visible');
+}
+
+function sectionIntersectsViewport(section: HTMLElement) {
+  const rect = section.getBoundingClientRect();
+  const viewportHeight = window.innerHeight || document.documentElement.clientHeight;
+  return rect.height > 0 && rect.bottom > 0 && rect.top < viewportHeight;
+}
+
 export function SiteExperienceProvider({ children }: { children: ReactNode }) {
   const [language, setLanguageState] = useState<Language>(readLanguage);
   const [theme, setThemeState] = useState<ThemeMode>(readTheme);
+  const revealedSectionsRef = useRef<Set<string>>(new Set());
   const copy = COPY[language];
+
+  const preserveRevealState = () => {
+    const root = document.documentElement;
+    root.dataset.experienceSwitching = 'true';
+
+    document.querySelectorAll<HTMLElement>('section[id]').forEach((section) => {
+      const hasRevealed = Boolean(section.querySelector('[data-reveal].is-visible, [data-reveal][data-revealed="true"]'));
+      if (hasRevealed || sectionIntersectsViewport(section)) revealedSectionsRef.current.add(section.id);
+    });
+
+    document.querySelectorAll<HTMLElement>(REVEAL_SELECTOR).forEach((element) => {
+      const rect = element.getBoundingClientRect();
+      const viewportHeight = window.innerHeight || document.documentElement.clientHeight;
+      if (
+        element.classList.contains('is-visible') ||
+        element.dataset.revealed === 'true' ||
+        (rect.height > 0 && rect.bottom > 0 && rect.top < viewportHeight)
+      ) {
+        revealElement(element);
+      }
+    });
+  };
 
   useEffect(() => {
     const root = document.documentElement;
@@ -72,19 +108,50 @@ export function SiteExperienceProvider({ children }: { children: ReactNode }) {
   }, [theme]);
 
   useEffect(() => {
-    const frame = window.requestAnimationFrame(() => {
-      window.dispatchEvent(new Event('veast:experiencechange'));
+    const root = document.documentElement;
+    let secondFrame = 0;
+    const firstFrame = window.requestAnimationFrame(() => {
+      secondFrame = window.requestAnimationFrame(() => {
+        for (const sectionId of revealedSectionsRef.current) {
+          document.getElementById(sectionId)?.querySelectorAll<HTMLElement>(REVEAL_SELECTOR).forEach(revealElement);
+        }
+
+        document.querySelectorAll<HTMLElement>(REVEAL_SELECTOR).forEach((element) => {
+          const rect = element.getBoundingClientRect();
+          const viewportHeight = window.innerHeight || document.documentElement.clientHeight;
+          if (rect.height > 0 && rect.bottom > 0 && rect.top < viewportHeight) revealElement(element);
+        });
+
+        delete root.dataset.experienceSwitching;
+        window.dispatchEvent(new Event(EXPERIENCE_CHANGE_EVENT));
+      });
     });
-    return () => window.cancelAnimationFrame(frame);
+
+    return () => {
+      window.cancelAnimationFrame(firstFrame);
+      window.cancelAnimationFrame(secondFrame);
+    };
   }, [language, theme]);
 
-  const setLanguage = (next: Language) => setLanguageState(next);
-  const setTheme = (next: ThemeMode) => setThemeState(next);
+  const setLanguage = (next: Language) => {
+    if (next === language) return;
+    preserveRevealState();
+    setLanguageState(next);
+  };
+
+  const setTheme = (next: ThemeMode) => {
+    if (next === theme) return;
+    preserveRevealState();
+    setThemeState(next);
+  };
 
   const toggleTheme = () => {
     const next = theme === 'dark' ? 'light' : 'dark';
     const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
     const documentWithTransition = document as Document & { startViewTransition?: (callback: () => void) => unknown };
+
+    preserveRevealState();
+
     if (!reduced && documentWithTransition.startViewTransition) {
       documentWithTransition.startViewTransition(() => setThemeState(next));
     } else {

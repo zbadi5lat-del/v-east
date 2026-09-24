@@ -839,7 +839,20 @@ a {
   html.motion-ready [data-reveal="up"] { transform: translate3d(0, 24px, 0); }
   html.motion-ready [data-reveal="right"] { transform: translate3d(20px, 0, 0); }
   html.motion-ready [data-reveal="image"] { transform: translate3d(0, 20px, 0) scale(.988); }
-  html.motion-ready [data-reveal].is-visible { opacity: 1; transform: translate3d(0, 0, 0) scale(1); }
+  html.motion-ready [data-reveal].is-visible,
+  html.motion-ready [data-reveal][data-revealed="true"] {
+    opacity: 1;
+    transform: translate3d(0, 0, 0) scale(1);
+  }
+
+  /* Experience-switch fail-safe:
+     while language/theme content is reconciling, previously visible content must
+     never fall back to the hidden reveal base state for even one frame. */
+  html[data-experience-switching="true"].motion-ready [data-reveal] {
+    opacity: 1 !important;
+    transform: none !important;
+    transition-delay: 0ms !important;
+  }
 
   .hero-enter { opacity: 0; animation: heroEnter 720ms var(--ease-emphasized) forwards; }
   .hero-enter--1 { animation-delay: 2520ms; }
