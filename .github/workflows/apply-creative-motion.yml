@@ -1,0 +1,60 @@
+name: Apply V.East creative motion patch
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - ".source/creative-motion-patch.b64"
+
+permissions:
+  contents: write
+
+jobs:
+  apply:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout exact pushed state
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Verify and apply bounded patch
+        shell: bash
+        run: |
+          set -euo pipefail
+          base64 -d .source/creative-motion-patch.b64 > /tmp/veast-creative-motion-patch.tgz
+          echo "fc1a64f9946cb1ae07dd7a5b97aaf8239096d912d5575f2d099c0b2fcf086428  /tmp/veast-creative-motion-patch.tgz" | sha256sum -c -
+          python - <<'PY'
+          import tarfile
+          allowed = {
+              'scripts/audit-worldclass.mjs',
+              'src/App.tsx',
+              'src/components/Header.tsx',
+              'src/components/Hero.tsx',
+              'src/components/SiteEntrance.tsx',
+              'src/index.css',
+          }
+          with tarfile.open('/tmp/veast-creative-motion-patch.tgz', 'r:gz') as tf:
+              members = [m for m in tf.getmembers() if m.isfile()]
+              actual = {m.name.removeprefix('./') for m in members}
+              if actual != allowed:
+                  raise SystemExit(f'Unexpected patch paths: {sorted(actual ^ allowed)}')
+              for m in members:
+                  if m.issym() or m.islnk():
+                      raise SystemExit('Links are not allowed in patch payload')
+              tf.extractall('.', filter='data')
+          PY
+          node scripts/verify-source.mjs
+          node scripts/audit-worldclass.mjs
+
+      - name: Commit verified source and clean temporary transport
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -f .source/creative-motion-patch.b64 .github/workflows/apply-creative-motion.yml
+          rmdir .source 2>/dev/null || true
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -m "feat: cinematic entrance and scroll motion"
+          git push
