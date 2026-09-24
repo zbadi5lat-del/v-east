@@ -1,0 +1,210 @@
+name: Verify V.East coastline sync v2
+
+on:
+  push:
+    branches: ["perf/coastline-sync-v2"]
+    paths:
+      - "src/components/SiteEntrance.tsx"
+      - "src/index.css"
+      - "scripts/verify-final-experience.mjs"
+      - "scripts/audit-worldclass.mjs"
+      - ".qa/COASTLINE_SYNC_V2"
+      - ".github/workflows/verify-coastline-sync-v2.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 12
+    steps:
+      - name: Checkout exact coastline branch
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - name: Install and verify source
+        run: |
+          set -euo pipefail
+          npm install --no-audit --no-fund --package-lock=false
+          npm run verify:source
+          npm run verify:worldclass
+          npm run verify:final-experience
+          npm run lint
+          npm run build
+
+      - name: Start local production preview
+        shell: bash
+        run: |
+          set -euo pipefail
+          npm run preview -- --host 127.0.0.1 --port 4173 > /tmp/veast-preview.log 2>&1 &
+          echo $! > /tmp/veast-preview.pid
+          for i in $(seq 1 40); do
+            if curl -fsS http://127.0.0.1:4173/ >/dev/null; then
+              exit 0
+            fi
+            sleep 0.5
+          done
+          cat /tmp/veast-preview.log
+          exit 1
+
+      - name: Install browser driver
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/coastline-e2e
+          cd /tmp/coastline-e2e
+          npm init -y >/dev/null
+          npm install --no-audit --no-fund playwright-core@1.55.0
+          command -v google-chrome
+
+      - name: Verify coastline seam and intro coordination
+        shell: bash
+        run: |
+          set -euo pipefail
+          cat > /tmp/coastline-e2e/check.mjs <<'NODE'
+          import { chromium } from 'playwright-core';
+          import fs from 'node:fs/promises';
+
+          const URL='http://127.0.0.1:4173/';
+          const result={checks:[],desktop:{},mobile:{},errors:[]};
+          const pass=(name,detail={})=>{result.checks.push({name,pass:true,detail});console.log('PASS',name,JSON.stringify(detail))};
+          const fail=(name,detail={})=>{result.checks.push({name,pass:false,detail});throw new Error(name+': '+JSON.stringify(detail))};
+          const assert=(ok,name,detail={})=>ok?pass(name,detail):fail(name,detail);
+
+          const cadence=async(page,duration=1000)=>page.evaluate(async duration=>{
+            const samples=[]; let start=performance.now(),last=start;
+            return await new Promise(resolve=>{
+              const tick=now=>{
+                samples.push(now-last); last=now;
+                if(now-start<duration) requestAnimationFrame(tick);
+                else{
+                  const clean=samples.slice(2).sort((a,b)=>a-b);
+                  const pick=q=>clean[Math.min(clean.length-1,Math.floor((clean.length-1)*q))]||0;
+                  const avg=clean.reduce((a,b)=>a+b,0)/Math.max(clean.length,1);
+                  const slow=clean.filter(x=>x>34).length;
+                  resolve({frames:clean.length,avg:+avg.toFixed(2),median:+pick(.5).toFixed(2),p95:+pick(.95).toFixed(2),slow34:slow,slowRatio:+(slow/Math.max(clean.length,1)).toFixed(3)});
+                }
+              };
+              requestAnimationFrame(tick);
+            });
+          },duration);
+
+          const seam=async(page,duration=1050)=>page.evaluate(async duration=>{
+            const coast=document.querySelector('.site-entry__coastline');
+            const ocean=document.querySelector('.site-entry__ocean');
+            const shore=document.querySelector('.site-entry__shore');
+            const svg=document.querySelector('.site-entry__ocean-svg');
+            const wet=document.querySelector('.site-entry__shore-wet');
+            const back=document.querySelector('.site-entry__backwash');
+            if(!coast||!ocean||!shore||!svg||!wet||!back) return null;
+            const samples=[]; let start=performance.now();
+            return await new Promise(resolve=>{
+              const tick=now=>{
+                const or=ocean.getBoundingClientRect(), sr=shore.getBoundingClientRect();
+                const matrix=x=>{const t=getComputedStyle(x).transform;const m=t==='none'?new DOMMatrix():new DOMMatrix(t);return{tx:+m.m41.toFixed(3),ty:+m.m42.toFixed(3),sx:+m.a.toFixed(4),sy:+m.d.toFixed(4)}};
+                samples.push({
+                  gap:+(or.bottom-sr.top).toFixed(3),
+                  coast:matrix(coast),ocean:matrix(ocean),shore:matrix(shore),svg:matrix(svg),
+                  wetOpacity:+getComputedStyle(wet).opacity,
+                  backOpacity:+getComputedStyle(back).opacity
+                });
+                if(now-start<duration) requestAnimationFrame(tick);
+                else{
+                  const gaps=samples.map(x=>x.gap);
+                  const drift=Math.max(...gaps)-Math.min(...gaps);
+                  const oceanTranslation=Math.max(...samples.map(x=>Math.abs(x.ocean.ty)));
+                  const shoreTranslation=Math.max(...samples.map(x=>Math.abs(x.shore.ty)));
+                  const svgTranslation=Math.max(...samples.map(x=>Math.abs(x.svg.ty)));
+                  resolve({
+                    frames:samples.length,
+                    gapMin:+Math.min(...gaps).toFixed(3),
+                    gapMax:+Math.max(...gaps).toFixed(3),
+                    gapDrift:+drift.toFixed(3),
+                    oceanTranslation:+oceanTranslation.toFixed(3),
+                    shoreTranslation:+shoreTranslation.toFixed(3),
+                    svgTranslation:+svgTranslation.toFixed(3),
+                    wetPeak:+Math.max(...samples.map(x=>x.wetOpacity)).toFixed(3),
+                    backPeak:+Math.max(...samples.map(x=>x.backOpacity)).toFixed(3)
+                  });
+                }
+              };
+              requestAnimationFrame(tick);
+            });
+          },duration);
+
+          const browser=await chromium.launch({headless:true,executablePath:'/usr/bin/google-chrome',args:['--no-sandbox','--disable-dev-shm-usage']});
+          try{
+            for(const spec of [
+              {key:'desktop',viewport:{width:1440,height:900},duration:1100},
+              {key:'mobile',viewport:{width:390,height:844},duration:950}
+            ]){
+              const context=await browser.newContext({viewport:spec.viewport,reducedMotion:'no-preference'});
+              const page=await context.newPage();
+              page.on('console',m=>{if(m.type()==='error')result.errors.push(spec.key+': '+m.text())});
+              page.on('pageerror',e=>result.errors.push(spec.key+' PAGEERROR: '+e.message));
+              const resp=await page.goto(URL,{waitUntil:'domcontentloaded',timeout:30000});
+              assert(resp?.ok(),spec.key+' document HTTP',{status:resp?.status()});
+
+              const names=await page.evaluate(()=>({
+                coast:getComputedStyle(document.querySelector('.site-entry__coastline')).animationName,
+                ocean:getComputedStyle(document.querySelector('.site-entry__ocean')).animationName,
+                shore:getComputedStyle(document.querySelector('.site-entry__shore')).animationName,
+                svg:getComputedStyle(document.querySelector('.site-entry__ocean-svg')).animationName,
+                wet:getComputedStyle(document.querySelector('.site-entry__shore-wet')).animationName,
+                back:getComputedStyle(document.querySelector('.site-entry__backwash')).animationName
+              }));
+              assert(names.coast==='siteEntryCoastlineSync'&&names.ocean==='siteEntryOcean'&&names.shore==='siteEntryShoreReveal'&&names.svg==='siteEntryOceanSurge'&&names.wet==='siteEntryWetSand'&&names.back==='siteEntryBackwash',spec.key+' coastline phases wired',names);
+
+              const [cad,sm]=await Promise.all([cadence(page,spec.duration),seam(page,spec.duration)]);
+              result[spec.key]={cadence:cad,seam:sm};
+              assert(cad.frames>=(spec.key==='desktop'?20:17)&&cad.median<=35.5&&cad.p95<=Math.max(55,cad.median*1.8)&&cad.slowRatio<=0.35,spec.key+' intro cadence',cad);
+              assert(sm&&sm.gapDrift<=1.5&&sm.oceanTranslation<=0.1&&sm.shoreTranslation<=0.1&&sm.svgTranslation<=0.1,spec.key+' sea-sand seam stays phase-locked',sm);
+              assert(sm.wetPeak>=0.45&&sm.backPeak>=0.25,spec.key+' wet sand/backwash remain visible',sm);
+
+              const timing=await page.evaluate(()=>({
+                total:getComputedStyle(document.querySelector('.site-entry')).animationDuration,
+                coast:getComputedStyle(document.querySelector('.site-entry__coastline')).animationDuration,
+                hero:getComputedStyle(document.querySelector('.hero-enter--1')).animationDelay,
+                logo:getComputedStyle(document.querySelector('.site-entry__logo')).animationDuration
+              }));
+              assert(parseFloat(timing.hero)<parseFloat(timing.total),spec.key+' hero overlaps intro resolve',timing);
+
+              await page.reload({waitUntil:'domcontentloaded'});
+              await page.waitForTimeout(650);
+              await page.screenshot({path:'/tmp/coastline-e2e/'+spec.key+'-coastline.png',fullPage:false});
+              await context.close();
+            }
+
+            const reduced=await browser.newContext({viewport:{width:1440,height:900},reducedMotion:'reduce'});
+            const rp=await reduced.newPage();
+            await rp.goto(URL,{waitUntil:'domcontentloaded',timeout:30000});
+            await rp.waitForTimeout(100);
+            const reducedState=await rp.evaluate(()=>({
+              entry:getComputedStyle(document.querySelector('.site-entry')).display,
+              hero:getComputedStyle(document.querySelector('.hero-copy-scroll')).transform
+            }));
+            assert(reducedState.entry==='none'&&(reducedState.hero==='none'||reducedState.hero==='matrix(1, 0, 0, 1, 0, 0)'),'reduced motion bypass remains intact',reducedState);
+            await reduced.close();
+
+            assert(result.errors.length===0,'no browser errors',{errors:result.errors});
+          }finally{
+            await browser.close();
+            await fs.writeFile('/tmp/coastline-e2e/results.json',JSON.stringify(result,null,2));
+          }
+          NODE
+          cd /tmp/coastline-e2e
+          timeout --signal=TERM --kill-after=10s 120s node check.mjs
+
+      - name: Upload coastline evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: veast-coastline-sync-v2-evidence
+          path: |
+            /tmp/coastline-e2e/results.json
+            /tmp/coastline-e2e/desktop-coastline.png
+            /tmp/coastline-e2e/mobile-coastline.png
+            /tmp/veast-preview.log
+          if-no-files-found: warn
