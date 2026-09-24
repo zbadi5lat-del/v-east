@@ -87,7 +87,7 @@ jobs:
             await page.screenshot({path:'/tmp/live-e2e/desktop.png',fullPage:false});
 
             const initialTheme=await page.evaluate(()=>document.documentElement.dataset.theme||'');
-            await page.locator('[role="switch"]').first().click();
+            await page.locator('[role="switch"]:visible').first().click();
             await page.waitForTimeout(250);
             const changedTheme=await page.evaluate(()=>document.documentElement.dataset.theme||'');
             assert(initialTheme!==changedTheme,'theme toggle changes real root theme',initialTheme+' -> '+changedTheme);
