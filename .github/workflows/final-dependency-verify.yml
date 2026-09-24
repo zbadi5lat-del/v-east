@@ -1,0 +1,40 @@
+name: V.East final dependency verification
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - ".qa/run-final-verify"
+
+permissions:
+  contents: write
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: "npm"
+          cache-dependency-path: package.json
+      - name: Install dependencies
+        run: npm install --no-audit --no-fund
+      - name: Full project verification
+        run: npm run verify
+      - name: Clean temporary verification transport
+        if: success()
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -f .qa/run-final-verify .github/workflows/final-dependency-verify.yml
+          rmdir .qa 2>/dev/null || true
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -m "chore: close final dependency verification"
+          git push
