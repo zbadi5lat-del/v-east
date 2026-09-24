@@ -1,2 +1,2 @@
-release_commit=7d0ac461cf2c21803e355034eb216c91298f3f18
-probe=production-full-matrix-5-legacy-semantic-fix
+release_commit=c1ef9cbb3f442208ea54b9c8a0e177f3111b757c
+probe=production-full-matrix-6-keyboard-escape-fix
