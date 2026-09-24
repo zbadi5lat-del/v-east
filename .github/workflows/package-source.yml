@@ -1,0 +1,54 @@
+name: V.East exact GitHub source package
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/package-source.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  package:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - name: Checkout exact main commit
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - name: Verify current source before packaging
+        run: |
+          set -euo pipefail
+          npm install --no-audit --no-fund --package-lock=false
+          npm run verify:source
+          npm run verify:worldclass
+          npm run verify:final-experience
+          npm run lint
+          npm run build
+
+      - name: Create exact tracked-source archive
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/veast-package
+          git rev-parse HEAD | tee /tmp/veast-package/GITHUB_COMMIT.txt
+          git archive             --format=zip             --prefix=V_East_Corporate_Website_FINAL_GITHUB/             --output=/tmp/veast-package/V_East_Corporate_Website_FINAL_GITHUB_20260924.zip             HEAD
+          (
+            cd /tmp/veast-package
+            sha256sum V_East_Corporate_Website_FINAL_GITHUB_20260924.zip               > V_East_Corporate_Website_FINAL_GITHUB_20260924_SHA256.txt
+          )
+          unzip -t /tmp/veast-package/V_East_Corporate_Website_FINAL_GITHUB_20260924.zip
+
+      - name: Upload exact GitHub source package
+        uses: actions/upload-artifact@v4
+        with:
+          name: veast-exact-github-source
+          path: |
+            /tmp/veast-package/GITHUB_COMMIT.txt
+            /tmp/veast-package/V_East_Corporate_Website_FINAL_GITHUB_20260924.zip
+            /tmp/veast-package/V_East_Corporate_Website_FINAL_GITHUB_20260924_SHA256.txt
+          if-no-files-found: error
+          compression-level: 0
