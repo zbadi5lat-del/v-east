@@ -1,0 +1,119 @@
+name: V.East global historical release audit
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - "src/**"
+      - "scripts/**"
+      - "index.html"
+      - "package.json"
+      - "vercel.json"
+      - ".github/workflows/global-release-audit.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  audit:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    steps:
+      - name: Checkout candidate source
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Install dependencies
+        run: npm install --no-audit --no-fund --package-lock=false
+
+      - name: Static source and build gates
+        shell: bash
+        run: |
+          set -euo pipefail
+          npm run verify:source
+          npm run verify:worldclass
+          npm run verify:final-experience
+          npm run lint
+          npm run build
+
+      - name: Repository hygiene and secret scan
+        shell: bash
+        run: |
+          set -euo pipefail
+          test ! -e .env
+          test ! -e .env.local
+          test ! -d .vercel
+          test ! -d dist/.git
+          ! git ls-files | grep -E '(^|/)(node_modules|dist|\.vercel|\.env)(/|$)'
+          ! grep -RIE --exclude-dir=node_modules --exclude-dir=.git --exclude='*.webp' --exclude='*.pdf'             '(BEGIN (RSA|OPENSSH|EC|DSA) PRIVATE KEY|ghp_[A-Za-z0-9]{20,}|github_pat_[A-Za-z0-9_]{20,}|sk-[A-Za-z0-9_-]{20,}|VERCEL_TOKEN\s*=|API_KEY\s*=)'             . || { echo "::error::Potential secret-like material found"; exit 1; }
+
+      - name: Install browser driver library
+        run: npm install --no-audit --no-fund --no-save --package-lock=false playwright-core@1.55.0
+
+      - name: Start production preview
+        shell: bash
+        run: |
+          set -euo pipefail
+          npm run preview -- --port 4173 > /tmp/veast-global-preview.log 2>&1 &
+          echo $! > /tmp/veast-global-preview.pid
+          for attempt in {1..30}; do
+            if curl --silent --fail http://127.0.0.1:4173/ >/dev/null; then
+              exit 0
+            fi
+            sleep 1
+          done
+          cat /tmp/veast-global-preview.log
+          exit 1
+
+      - name: Historical bug-class regression matrix
+        shell: bash
+        run: |
+          set -euo pipefail
+          CHROME_PATH="$(command -v google-chrome || command -v chromium || command -v chromium-browser)"
+          PREVIEW_URL="http://127.0.0.1:4173" CHROME_PATH="$CHROME_PATH"             timeout --signal=TERM --kill-after=10s 240s node scripts/historical-regression-matrix.mjs
+
+      - name: No-refresh reveal regression
+        shell: bash
+        run: |
+          set -euo pipefail
+          CHROME_PATH="$(command -v google-chrome || command -v chromium || command -v chromium-browser)"
+          PREVIEW_URL="http://127.0.0.1:4173" CHROME_PATH="$CHROME_PATH"             timeout --signal=TERM --kill-after=10s 180s node scripts/experience-toggle-regression.mjs
+
+      - name: Prepare matrix browser path
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/live-e2e
+          cd /tmp/live-e2e
+          npm init -y >/dev/null
+          npm install --no-audit --no-fund playwright-core@1.55.0
+
+      - name: Responsive motion matrix
+        shell: bash
+        run: |
+          set -euo pipefail
+          CHROME_PATH="$(command -v google-chrome || command -v chromium || command -v chromium-browser)"
+          LIVE_URL="http://127.0.0.1:4173" CHROME_PATH="$CHROME_PATH"             timeout --signal=TERM --kill-after=10s 180s node scripts/responsive-motion-matrix.mjs
+
+      - name: Full production matrix
+        shell: bash
+        run: |
+          set -euo pipefail
+          CHROME_PATH="$(command -v google-chrome || command -v chromium || command -v chromium-browser)"
+          LIVE_URL="http://127.0.0.1:4173" CHROME_PATH="$CHROME_PATH"             timeout --signal=TERM --kill-after=10s 240s node scripts/live-production-matrix.mjs
+
+      - name: Preview log
+        if: always()
+        run: cat /tmp/veast-global-preview.log || true
+
+      - name: Stop preview
+        if: always()
+        shell: bash
+        run: |
+          if [ -f /tmp/veast-global-preview.pid ]; then
+            kill "$(cat /tmp/veast-global-preview.pid)" 2>/dev/null || true
+          fi
