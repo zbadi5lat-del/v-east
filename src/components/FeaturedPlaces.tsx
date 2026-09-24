@@ -39,7 +39,7 @@ function linkIcon(href: string) {
 }
 
 export function FeaturedPlaces() {
-  const { copy, language } = useSiteExperience();
+  const { copy } = useSiteExperience();
   const c = copy.places;
   const cards = c.cards as readonly PlaceCardCopy[];
   const [activeId, setActiveId] = useState<string | null>(null);
@@ -110,61 +110,44 @@ export function FeaturedPlaces() {
             </div>
           </div>
 
-          <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
+          <div className="place-logo-grid mx-auto grid w-full max-w-3xl grid-cols-2 gap-4 sm:gap-6">
             {cards.map((card, index) => (
               <button
                 key={card.id}
                 ref={(node: HTMLButtonElement | null) => { triggerRefs.current[card.id] = node; }}
                 type="button"
                 data-reveal="up"
-                data-delay={String(index * 70)}
+                data-delay={String(index * 80)}
+                data-venue-id={card.id}
                 aria-haspopup="dialog"
                 aria-controls="place-profile-dialog"
                 aria-label={`${c.openProfile} ${card.name}`}
                 onClick={() => setActiveId(card.id)}
-                className="place-card group w-full overflow-hidden rounded-[28px] border border-corp-border-light bg-corp-light text-start shadow-[0_18px_52px_rgba(7,31,62,0.08)] transition-[transform,border-color,box-shadow] duration-300 hover:-translate-y-1 hover:border-corp-blue/30 hover:shadow-[0_28px_70px_rgba(7,31,62,0.12)]"
+                className="place-card place-logo-card group relative flex min-h-[210px] w-full flex-col items-center justify-center overflow-hidden rounded-[28px] border border-corp-border-light bg-white px-4 py-7 text-center shadow-[0_18px_50px_rgba(7,31,62,0.07)] transition-[transform,border-color,box-shadow,background-color] duration-300 hover:-translate-y-1.5 hover:border-corp-blue/30 hover:shadow-[0_28px_74px_rgba(7,31,62,0.13)] focus-visible:outline-none sm:min-h-[260px] sm:px-7 sm:py-9"
               >
-                <div className="place-card__visual relative overflow-hidden border-b border-corp-border-light bg-white p-5 sm:p-6">
-                  <div className="place-card__glow" aria-hidden="true" />
-                  <div className="flex items-start justify-between gap-4">
-                    <div className="flex min-w-0 items-center gap-4">
-                      <div className="place-card__mark flex h-[74px] w-[74px] shrink-0 items-center justify-center overflow-hidden rounded-3xl border border-corp-border-light bg-white p-2 shadow-[0_14px_34px_rgba(7,31,62,0.08)] sm:h-[86px] sm:w-[86px] sm:p-2.5">
-                        <img src={imageMap[card.id as keyof typeof imageMap]} width={160} height={160} alt={card.imageAlt} className="h-full w-full object-contain" loading="lazy" decoding="async" />
-                      </div>
-                      <div className="min-w-0">
-                        <span className="font-inter text-[10px] font-bold uppercase tracking-[0.16em] text-corp-blue">{card.category}</span>
-                        <h3 className="font-cairo mt-2 text-2xl font-black leading-tight text-corp-dark-text sm:text-[2rem]">{card.name}</h3>
-                        <p className="mt-1 text-sm leading-6 text-corp-muted">{card.subtitle}</p>
-                      </div>
-                    </div>
-                    <span className="place-card__launch flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border border-corp-border-light bg-white text-corp-muted transition-[transform,border-color,color] duration-200 group-hover:border-corp-blue/40 group-hover:text-corp-blue" aria-hidden="true">
-                      <ArrowUpRight className={`h-5 w-5 ${language === 'en' ? '' : 'rotate-180'}`} />
-                    </span>
-                  </div>
-                  <div className="mt-5 flex flex-wrap gap-2.5">
-                    {card.tags.map((tag) => <span key={tag} className="place-chip">{tag}</span>)}
-                  </div>
-                </div>
-                <div className="p-5 sm:p-6">
-                  <div className="grid gap-4 sm:grid-cols-2">
-                    <div className="place-mini-stat"><MapPin aria-hidden="true" className="h-4 w-4 text-corp-blue" /><span>{card.city}</span></div>
-                    <div className="place-mini-stat"><Clock3 aria-hidden="true" className="h-4 w-4 text-corp-blue" /><span>{card.hours}</span></div>
-                  </div>
-                  <div className="mt-5 rounded-2xl border border-corp-border-light bg-white p-4 shadow-[0_12px_24px_rgba(7,31,62,0.04)]">
-                    <span className="font-inter text-[10px] font-bold uppercase tracking-[0.16em] text-corp-blue">{c.profileSummaryLabel}</span>
-                    <p className="mt-2 text-sm leading-7 text-corp-muted">{card.summary}</p>
-                  </div>
-                  <div className="mt-5 flex items-center justify-between gap-4">
-                    <div className="min-w-0">
-                      <span className="font-inter block text-[10px] font-bold uppercase tracking-[0.16em] text-corp-muted">{c.quickFactsLabel}</span>
-                      <span className="mt-1 block text-sm font-semibold leading-6 text-corp-dark-text">{card.highlight}</span>
-                    </div>
-                    <span className="btn-primary inline-flex min-h-11 items-center justify-center px-4 py-2 text-sm font-bold">{c.openProfile}</span>
-                  </div>
-                </div>
+                <span className="place-logo-card__halo" aria-hidden="true" />
+                <span className="place-logo-card__ring" aria-hidden="true" />
+                <span className="place-logo-card__mark relative z-10 flex h-[104px] w-[104px] items-center justify-center overflow-hidden rounded-[28px] border border-corp-border-light bg-white p-3 shadow-[0_16px_38px_rgba(7,31,62,0.09)] transition-[transform,box-shadow,border-color] duration-300 group-hover:scale-[1.045] group-hover:border-corp-blue/25 group-hover:shadow-[0_22px_48px_rgba(7,31,62,0.13)] sm:h-[148px] sm:w-[148px] sm:rounded-[36px] sm:p-4">
+                  <img
+                    src={imageMap[card.id as keyof typeof imageMap]}
+                    width={180}
+                    height={180}
+                    alt={card.imageAlt}
+                    className="h-full w-full object-contain"
+                    loading="lazy"
+                    decoding="async"
+                  />
+                </span>
+                <span className="place-logo-card__name font-cairo relative z-10 mt-5 block text-lg font-black leading-tight text-corp-dark-text sm:mt-6 sm:text-2xl">
+                  {card.name}
+                </span>
+                <span className="place-logo-card__hint font-inter relative z-10 mt-2 inline-flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-[0.14em] text-corp-blue">
+                  <span>{c.openProfile}</span>
+                  <ArrowUpRight aria-hidden="true" className="h-3.5 w-3.5 transition-transform duration-200 group-hover:-translate-y-0.5 group-hover:translate-x-0.5" />
+                </span>
               </button>
             ))}
-          </div>
+          </div>          </div>
         </div>
       </section>
 
