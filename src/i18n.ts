@@ -40,6 +40,19 @@ export const COPY = {
       home: 'الرئيسية', about: 'عن V.East', pillars: 'الركائز', services: 'الخدمات', sectors: 'القطاعات', system: 'منظومة التشغيل', field: 'من الميدان', why: 'لماذا V.East', leadership: 'القيادة', faq: 'الأسئلة الشائعة', contact: 'تواصل معنا',
       drawerIntro: 'إدارة وتشغيل المنشآت الرياضية والسياحية، من الخطة إلى الميدان.',
     },
+    resources: {
+      cta: 'ملفات V.East',
+      panelLabel: 'مكتبة ملفات V.East',
+      title: 'ملفات جاهزة للتحميل',
+      description: 'ثلاثة ملفات PDF حقيقية ومحدثة عن الشركة والخدمات ونماذج الأماكن التي نتعامل معها.',
+      close: 'إغلاق مكتبة الملفات',
+      download: 'تحميل PDF',
+      items: [
+        ['Company Profile', 'الملف التعريفي للشركة'],
+        ['Services & Operations', 'الخدمات ومنظومة التشغيل'],
+        ['Portfolio & Featured Venues', 'نماذج الأعمال والأماكن المميزة'],
+      ],
+    },
     entrance: { scope: ['إدارة', 'تشغيل', 'سلامة', 'ميدان'] },
     hero: {
       eyebrow: 'منشأتك. مسؤوليتنا.',
@@ -271,6 +284,19 @@ export const COPY = {
     nav: {
       home: 'Home', about: 'About V.East', pillars: 'Operating pillars', services: 'Services', sectors: 'Sectors', system: 'Operating system', field: 'Field operations', why: 'Why V.East', leadership: 'Leadership', faq: 'FAQ', contact: 'Contact',
       drawerIntro: 'Sports and tourism facility operations, from planning to the field.',
+    },
+    resources: {
+      cta: 'V.East PDFs',
+      panelLabel: 'V.East PDF library',
+      title: 'Ready-to-download files',
+      description: 'Three real, current PDF files covering the company, services and operations, and featured venues.',
+      close: 'Close PDF library',
+      download: 'Download PDF',
+      items: [
+        ['Company Profile', 'Company profile'],
+        ['Services & Operations', 'Services and operating system'],
+        ['Portfolio & Featured Venues', 'Portfolio and featured venues'],
+      ],
     },
     entrance: { scope: ['Management', 'Operations', 'Safety', 'Field'] },
     hero: {

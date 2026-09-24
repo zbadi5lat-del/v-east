@@ -10,13 +10,44 @@ function focusMobileNavigationToggle(){requestAnimationFrame(()=>document.getEle
 
 export function Header({onNavigateToContact}:HeaderProps){
   const {copy,language}=useSiteExperience();
-  const [open,setOpen]=useState(false); const [scrolled,setScrolled]=useState(false); const [activeSection,setActiveSection]=useState('#hero');
+  const [open,setOpen]=useState(false); const [scrolled,setScrolled]=useState(false); const [headerHidden,setHeaderHidden]=useState(false); const [scrollDirection,setScrollDirection]=useState<'up'|'down'>('up'); const [activeSection,setActiveSection]=useState('#hero');
+  const headerRef=useRef<HTMLElement | null>(null);
   const desktopNavRef=useRef<HTMLElement | null>(null);
   const [navPill,setNavPill]=useState({x:0,width:0,visible:false});
   const desktopNavItems=useMemo(()=>[["#hero",copy.nav.home],["#about",copy.nav.about],["#services",copy.nav.services],["#sectors",copy.nav.sectors],["#operating-system",copy.nav.system],["#field-operations",copy.nav.field],["#leadership",copy.nav.leadership]] as const,[copy]);
   const desktopActiveSection=activeSection==='#pillars'?'#about':activeSection==='#why-veast'||activeSection==='#faq'?'#leadership':activeSection;
   const mobileNavItems=useMemo(()=>[["#hero",copy.nav.home],["#about",copy.nav.about],["#pillars",copy.nav.pillars],["#services",copy.nav.services],["#sectors",copy.nav.sectors],["#operating-system",copy.nav.system],["#field-operations",copy.nav.field],["#why-veast",copy.nav.why],["#leadership",copy.nav.leadership],["#faq",copy.nav.faq]] as const,[copy]);
-  useEffect(()=>{const onScroll=()=>setScrolled(window.scrollY>18); onScroll(); window.addEventListener('scroll',onScroll,{passive:true}); return()=>window.removeEventListener('scroll',onScroll)},[]);
+
+  useEffect(()=>{
+    let frame=0; let lastScrolled=false; let lastY=Math.max(window.scrollY,0); let lastDirection:'up'|'down'='up'; let lastHidden=false;
+    const paint=()=>{
+      frame=0;
+      const y=Math.max(window.scrollY,0);
+      const delta=y-lastY;
+      const nextScrolled=y>18;
+      if(nextScrolled!==lastScrolled){lastScrolled=nextScrolled;setScrolled(nextScrolled)}
+      let nextDirection=lastDirection;
+      if(delta>4)nextDirection='down';
+      else if(delta<-4)nextDirection='up';
+      if(nextDirection!==lastDirection){lastDirection=nextDirection;setScrollDirection(nextDirection)}
+      const nextHidden=!open&&y>140&&delta>4;
+      const reveal=!open&&(delta<-4||y<32);
+      let resolvedHidden=lastHidden;
+      if(nextHidden)resolvedHidden=true;
+      else if(reveal||open||y<32)resolvedHidden=false;
+      if(resolvedHidden!==lastHidden){lastHidden=resolvedHidden;setHeaderHidden(resolvedHidden)}
+      const max=Math.max(document.documentElement.scrollHeight-window.innerHeight,1);
+      const progress=Math.min(1,Math.max(0,y/max));
+      headerRef.current?.style.setProperty('--page-scroll',progress.toFixed(4));
+      lastY=y;
+    };
+    const schedule=()=>{if(!frame)frame=requestAnimationFrame(paint)};
+    paint();
+    window.addEventListener('scroll',schedule,{passive:true});
+    window.addEventListener('resize',schedule,{passive:true});
+    return()=>{cancelAnimationFrame(frame);window.removeEventListener('scroll',schedule);window.removeEventListener('resize',schedule)};
+  },[open]);
+
   useEffect(()=>{const sections=mobileNavItems.map(([href])=>document.getElementById(href.slice(1))).filter((section):section is HTMLElement=>Boolean(section)); if(!sections.length||!('IntersectionObserver'in window))return; const observer=new IntersectionObserver(entries=>{const visible=entries.filter(e=>e.isIntersecting).sort((a,b)=>b.intersectionRatio-a.intersectionRatio)[0]; if(visible?.target.id)setActiveSection(`#${visible.target.id}`)},{rootMargin:'-18% 0px -64% 0px',threshold:[0.05,0.2,0.5]}); sections.forEach(s=>observer.observe(s)); return()=>observer.disconnect()},[mobileNavItems]);
   useLayoutEffect(()=>{
     let cancelled=false; let frame=0;
@@ -37,11 +68,11 @@ export function Header({onNavigateToContact}:HeaderProps){
   const closeDrawer=(returnFocus=false)=>{setOpen(false);if(returnFocus)focusMobileNavigationToggle()};
   const navigateToContactFromDrawer=()=>{setOpen(false);requestAnimationFrame(()=>requestAnimationFrame(onNavigateToContact))};
   return <>
-    <header className={`site-header sticky top-0 z-40 w-full border-b transition-[background-color,border-color,box-shadow] duration-300 ${scrolled?'is-scrolled border-corp-border/80 bg-corp-navy-dark/95 shadow-[0_12px_34px_rgba(0,0,0,0.18)] backdrop-blur-xl':'border-corp-border/40 bg-corp-navy/90 backdrop-blur-lg'}`}>
-      <div className={`mx-auto flex max-w-[90rem] items-center justify-between gap-3 px-5 transition-[height] duration-300 sm:px-8 ${scrolled?'h-[72px]':'h-20'}`}>
+    <header ref={headerRef} className={`site-header fixed inset-x-0 top-0 z-40 w-full ${scrolled?'is-scrolled':''} ${headerHidden?'is-hidden':''} ${scrollDirection==='down'?'is-going-down':'is-going-up'}`}>
+      <div className="site-header__inner mx-auto flex h-20 max-w-[90rem] items-center justify-between gap-3 px-5 sm:px-8">
         <div className="flex min-w-0 items-center gap-3">
           <button type="button" id="mobile-navigation-toggle" className="header-icon-button -ms-2 flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-transparent text-white transition-[background-color,border-color,color,transform] duration-200 active:scale-95 xl:hidden" aria-label={copy.common.openMenu} aria-expanded={open} aria-controls="mobile-navigation" onClick={()=>setOpen(true)}><Menu aria-hidden="true" className="h-6 w-6"/></button>
-          <a href="#hero" aria-label={copy.common.homeLabel} className="group flex min-w-0 items-center gap-3"><div className="flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden rounded-xl border border-white/10 bg-white p-0.5 shadow-sm transition-transform duration-300 group-hover:-translate-y-0.5"><img src={ASSETS.logo} width={1079} height={1077} alt={copy.common.logoAlt} className="h-full w-full object-contain"/></div><div className="flex min-w-0 flex-col"><span className="font-cairo text-[22px] font-black leading-none tracking-wide text-white sm:text-2xl" dir="ltr">V.EAST</span><span className="font-inter mt-1 hidden text-[9px] font-semibold uppercase tracking-[0.15em] text-corp-sand sm:block xl:hidden 2xl:block">{copy.common.descriptor}</span></div></a>
+          <a href="#hero" aria-label={copy.common.homeLabel} className="group flex min-w-0 items-center gap-3"><div className="site-header__logo flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden rounded-xl border border-white/10 bg-white p-0.5 shadow-sm transition-transform duration-300 group-hover:-translate-y-0.5"><img src={ASSETS.logo} width={1079} height={1077} alt={copy.common.logoAlt} className="h-full w-full object-contain"/></div><div className="flex min-w-0 flex-col"><span className="font-cairo text-[22px] font-black leading-none tracking-wide text-white sm:text-2xl" dir="ltr">V.EAST</span><span className="font-inter mt-1 hidden text-[9px] font-semibold uppercase tracking-[0.15em] text-corp-sand sm:block xl:hidden 2xl:block">{copy.common.descriptor}</span></div></a>
         </div>
         <nav ref={desktopNavRef} className="desktop-nav-track relative isolate hidden items-center gap-0.5 rounded-2xl p-1 xl:flex" aria-label={copy.common.mainNav}>
           <span className="desktop-nav-pill" aria-hidden="true" style={{transform:`translateX(${navPill.x}px) scaleX(${Math.max(navPill.width,1)})`,opacity:navPill.visible?1:0}}/>
@@ -52,8 +83,10 @@ export function Header({onNavigateToContact}:HeaderProps){
           <div className="hidden xl:block"><ExperienceControls compact/></div>
           <div className="md:hidden"><ThemeSceneToggle compact/></div>
         </div>
+        <span className="site-header-progress" aria-hidden="true"><span className="site-header-progress__fill" /></span>
       </div>
     </header>
+    <div className="site-header-spacer" aria-hidden="true" />
     <div className={`mobile-drawer-overlay fixed inset-0 z-50 bg-corp-navy-dark/80 backdrop-blur-sm transition-opacity duration-300 xl:hidden ${open?'pointer-events-auto opacity-100':'pointer-events-none opacity-0'}`} aria-hidden="true" onClick={()=>closeDrawer(true)}/>
     <aside id="mobile-navigation" className={`mobile-navigation-drawer fixed top-0 z-[60] flex h-dvh w-[340px] max-w-[90vw] flex-col border-s border-corp-border bg-corp-navy-dark shadow-2xl transition-transform duration-300 xl:hidden ${open?'is-open':'is-closed'}`} aria-hidden={!open} inert={!open} role="dialog" aria-modal="true" aria-label={copy.common.navDialog}>
       <div className="flex h-20 items-center justify-between border-b border-corp-border px-5"><div className="flex items-center gap-3"><div className="flex h-10 w-10 items-center justify-center overflow-hidden rounded-xl bg-white p-0.5"><img src={ASSETS.logo} width={1079} height={1077} alt="" className="h-full w-full object-contain"/></div><div><span className="font-cairo block text-xl font-black tracking-wider text-white" dir="ltr">V.EAST</span><span className="font-inter text-[9px] font-bold uppercase tracking-[0.15em] text-corp-sand">{copy.common.operations}</span></div></div><button id="mobile-navigation-close" type="button" onClick={()=>{setOpen(false);focusMobileNavigationToggle()}} aria-label={copy.common.closeMenu} className="header-icon-button flex h-11 w-11 items-center justify-center rounded-xl border border-corp-border text-slate-300 transition-colors"><X aria-hidden="true" className="h-6 w-6"/></button></div>

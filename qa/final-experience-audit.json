@@ -1,0 +1,90 @@
+{
+  "generatedAt": "2026-09-24T08:37:26.457Z",
+  "summary": {
+    "total": 16,
+    "passed": 16,
+    "failed": 0
+  },
+  "checks": [
+    {
+      "id": "pdf-V-EAST-Company-Profile.pdf",
+      "status": "PASS",
+      "detail": "V-EAST-Company-Profile.pdf exists=true bytes=2243103 magic=%PDF-"
+    },
+    {
+      "id": "pdf-V-EAST-Services-Operations.pdf",
+      "status": "PASS",
+      "detail": "V-EAST-Services-Operations.pdf exists=true bytes=2822420 magic=%PDF-"
+    },
+    {
+      "id": "pdf-V-EAST-Portfolio-Featured-Venues.pdf",
+      "status": "PASS",
+      "detail": "V-EAST-Portfolio-Featured-Venues.pdf exists=true bytes=1646315 magic=%PDF-"
+    },
+    {
+      "id": "pdf-resource-map",
+      "status": "PASS",
+      "detail": "All three PDFs are mapped as local on-demand resources."
+    },
+    {
+      "id": "no-save-page-pdf",
+      "status": "PASS",
+      "detail": "Save/print-page PDF behavior is removed."
+    },
+    {
+      "id": "real-download-links",
+      "status": "PASS",
+      "detail": "PDF center exposes real download links."
+    },
+    {
+      "id": "pdf-library-localized",
+      "status": "PASS",
+      "detail": "PDF library is localized in Arabic and English."
+    },
+    {
+      "id": "contact-no-overlay",
+      "status": "PASS",
+      "detail": "Floating PDF/WhatsApp controls are opposite-sided and both disappear over the contact/message section."
+    },
+    {
+      "id": "pdf-popup-inert",
+      "status": "PASS",
+      "detail": "Closed PDF panel is inert/hidden and Escape-close is implemented."
+    },
+    {
+      "id": "scroll-direction-header",
+      "status": "PASS",
+      "detail": "Header responds to scroll direction and can auto-hide/reveal."
+    },
+    {
+      "id": "header-rAF",
+      "status": "PASS",
+      "detail": "Header scroll behavior is requestAnimationFrame-throttled and passive."
+    },
+    {
+      "id": "stronger-hero-parallax",
+      "status": "PASS",
+      "detail": "Hero uses stronger layered compositor-friendly scroll depth."
+    },
+    {
+      "id": "mobile-motion-restraint",
+      "status": "PASS",
+      "detail": "Extra hero parallax is disabled on mobile."
+    },
+    {
+      "id": "reduced-motion-restraint",
+      "status": "PASS",
+      "detail": "Extra parallax respects Reduced Motion."
+    },
+    {
+      "id": "finite-cinematic-entry",
+      "status": "PASS",
+      "detail": "Cinematic entry remains finite and bounded."
+    },
+    {
+      "id": "no-persistent-will-change",
+      "status": "PASS",
+      "detail": "No persistent will-change hints."
+    }
+  ]
+}

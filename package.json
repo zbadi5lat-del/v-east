@@ -10,7 +10,8 @@
     "build": "vite build",
     "preview": "vite preview --host=0.0.0.0",
     "verify:worldclass": "node scripts/audit-worldclass.mjs",
-    "verify": "npm run verify:source && npm run verify:worldclass && npm run lint && npm run build"
+    "verify": "npm run verify:source && npm run verify:worldclass && npm run verify:final-experience && npm run lint && npm run build",
+    "verify:final-experience": "node scripts/verify-final-experience.mjs"
   },
   "dependencies": {
     "lucide-react": "^0.546.0",

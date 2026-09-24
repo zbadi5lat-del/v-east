@@ -26,6 +26,13 @@ export const PLACE_ASSETS = {
   halfMoon: '/assets/half-moon-profile.webp',
 } as const;
 
+
+export const PDF_RESOURCES = [
+  { id: 'company-profile', href: '/downloads/V-EAST-Company-Profile.pdf' },
+  { id: 'services-operations', href: '/downloads/V-EAST-Services-Operations.pdf' },
+  { id: 'portfolio-featured-venues', href: '/downloads/V-EAST-Portfolio-Featured-Venues.pdf' },
+] as const;
+
 export const SERVICES = [
   'sports-facility-operations',
   'aquatic-operations',

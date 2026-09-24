@@ -33,7 +33,7 @@ export default function App() {
   };
 
   return (
-    <div className="site-shell flex min-h-screen flex-col overflow-x-hidden bg-corp-navy text-corp-light">
+    <div className="site-shell flex min-h-screen flex-col overflow-x-clip bg-corp-navy text-corp-light">
       <SiteEntrance />
       <a href="#main-content" className="skip-link">{copy.common.skip}</a>
       <Header onNavigateToContact={scrollToContact} />
