@@ -29,6 +29,19 @@ for(const[l,t]of cases)for(const[w,h]of widths){
  await p.evaluate(()=>scrollTo(0,Math.min(420,document.querySelector('#hero')?.scrollHeight||420)));await S(150);
  const hero=await p.evaluate(()=>{const h=document.querySelector('#hero'),q=document.querySelector('.hero-copy-scroll'),v=document.querySelector('.hero-visual-scroll .hero-media-frame'),g=document.querySelector('.hero-operations-grid');return{progress:parseFloat(h?.style.getPropertyValue('--hero-scroll')||'0'),copy:q?getComputedStyle(q).transform:'none',visual:v?getComputedStyle(v).transform:'none',grid:g?getComputedStyle(g).transform:'none'}});
  A(hero.progress>0.02&&hero.copy!=='none'&&hero.visual!=='none'&&hero.grid!=='none','hero scroll motion active',{l,t,w,...hero});
+ const places=p.locator('#places');await places.scrollIntoViewIfNeeded();await S(260);
+ const venue=await places.evaluate(el=>{const cards=[...el.querySelectorAll('.place-card')];return{count:cards.length,minimal:cards.every(c=>c.classList.contains('place-logo-card')&&!!c.querySelector('.place-logo-card__mark img')&&!!c.querySelector('.place-logo-card__name')&&!c.querySelector('.place-mini-stat')&&!c.querySelector('.place-chip')),names:cards.map(c=>c.querySelector('.place-logo-card__name')?.textContent?.trim()||''),inside:cards.every(c=>{const r=c.getBoundingClientRect();return r.left>=-2&&r.right<=innerWidth+2&&r.width>=120&&r.height>=170&&r.height<=310})}});
+ A(venue.count===2&&venue.minimal&&venue.names.every(Boolean)&&venue.inside,'compact venue logo tiles render',{l,t,w,...venue});
+ const pdf=p.locator('button[aria-controls="floating-pdf-panel"]');await S(160);
+ const pdfState=await pdf.evaluate(el=>{const s=getComputedStyle(el),svg=el.querySelector('svg'),r=el.getBoundingClientRect();return{opacity:+s.opacity,pointer:s.pointerEvents,color:s.color,bg:s.backgroundColor,svg:svg?getComputedStyle(svg).color:'',visible:r.width>=44&&r.height>=44&&r.bottom>0&&r.top<innerHeight}});
+ A(pdfState.opacity>.95&&pdfState.pointer!=='none'&&pdfState.visible,'PDF launcher visible after hero',{l,t,w,...pdfState});
+ if(t==='light')A(pdfState.color==='rgb(16, 42, 51)'&&pdfState.svg==='rgb(23, 103, 130)','light PDF launcher readable',{l,w,...pdfState});
+ await pdf.click();await S(160);
+ const panel=await p.locator('#floating-pdf-panel').evaluate(el=>{const s=getComputedStyle(el),links=[...el.querySelectorAll('a[href$=".pdf"]')],title=el.querySelector('.floating-resources__title'),eye=el.querySelector('.floating-resources__eyebrow');return{opacity:+s.opacity,pointer:s.pointerEvents,links:links.length,title:title?getComputedStyle(title).color:'',eyebrow:eye?getComputedStyle(eye).color:''}});
+ A(panel.opacity>.9&&panel.pointer!=='none'&&panel.links===3,'PDF panel opens with three downloads',{l,t,w,...panel});
+ if(t==='light')A(panel.title==='rgb(16, 42, 51)'&&panel.eyebrow==='rgb(118, 85, 34)','light PDF panel readable',{l,w,...panel});
+ await p.keyboard.press('Escape');await S(100);
+ if(l==='en'&&t==='light'&&[390,768].includes(w))await p.screenshot({path:`/tmp/responsive-motion/places-pdf-${w}.png`,fullPage:false});
  const pillars=p.locator('#pillars');await pillars.scrollIntoViewIfNeeded();await S(180);
  if(t==='light'){const pc=await pillars.locator('.dark-feature-card').first().evaluate(el=>{const h=el.querySelector('h3'),q=el.querySelector('p'),s=getComputedStyle(el);return{bg:s.backgroundImage,title:h?getComputedStyle(h).color:'',body:q?getComputedStyle(q).color:''}});A(pc.bg.includes('linear-gradient')&&pc.title==='rgb(16, 42, 51)'&&pc.body==='rgb(82, 103, 107)','light pillars readable',{l,w,...pc});}
  if(l==='en'&&t==='light'&&[390,768].includes(w))await p.screenshot({path:`/tmp/responsive-motion/pillars-${w}.png`,fullPage:false});
