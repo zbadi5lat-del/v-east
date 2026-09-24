@@ -2831,3 +2831,83 @@ html[data-theme="light"] .site-header.is-scrolled .site-header__inner { backgrou
     52% { opacity: .54; }
   }
 }
+
+
+/* ========================================================================== */
+/* 2026-09-24 — Snappy cadence final pass                                     */
+/* Faster perceived response without adding render work or removing detail.   */
+/* ========================================================================== */
+
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation-duration: 220ms;
+}
+
+.site-header { transition-duration: 190ms, 140ms; }
+.site-header__inner { transition-duration: 210ms, 180ms, 170ms; }
+.site-header .desktop-nav-track { transition-duration: 180ms; }
+.site-header-progress__fill::after { transition-duration: 140ms; }
+
+.theme-scene-toggle { transition-duration: 230ms, 150ms, 150ms; }
+.theme-scene-toggle__orb { transition-duration: 260ms, 180ms, 180ms, 180ms; }
+.theme-scene-toggle__sun,
+.theme-scene-toggle__moon { transition-duration: 170ms, 230ms; }
+.theme-scene-toggle__water { transition-duration: 220ms, 190ms; }
+.theme-scene-toggle__stars { transition-duration: 140ms; }
+.theme-scene-toggle__clouds { transition-duration: 170ms, 260ms; }
+
+.place-logo-card__halo { transition-duration: 170ms, 200ms; }
+.place-logo-card__ring { transition-duration: 220ms, 170ms, 170ms; }
+
+@media (prefers-reduced-motion: no-preference) {
+  .site-entry { animation-duration: 2200ms; }
+  .site-entry::before { animation-duration: 1550ms; }
+  .site-entry__logo { animation-duration: 1450ms; }
+  .site-entry__orbit--outer { animation-duration: 1250ms; animation-delay: 90ms; }
+  .site-entry__orbit--inner { animation-duration: 1180ms; animation-delay: 140ms; }
+  .site-entry__wordmark { animation-duration: 1260ms; animation-delay: 210ms; }
+  .site-entry__scope { animation-duration: 860ms; animation-delay: 500ms; }
+  .site-entry__horizon { animation-duration: 1200ms; animation-delay: 110ms; }
+  .site-entry__sweep { animation-duration: 1050ms; animation-delay: 170ms; }
+  .site-entry__ocean { animation-duration: 1750ms; animation-delay: 50ms; }
+  .site-entry__ocean-svg { animation: siteEntryOceanSurge 1750ms cubic-bezier(.16,.86,.2,1) 50ms both; }
+
+  .site-entry__ocean-foam--one { animation-duration: 1180ms; animation-delay: 250ms; }
+  .site-entry__ocean-foam--two { animation-duration: 1080ms; animation-delay: 330ms; }
+  .site-entry__ocean-foam--three { animation-duration: 960ms; animation-delay: 410ms; }
+  .site-entry__ocean-crest { animation-duration: 780ms; animation-delay: 330ms; }
+  .site-entry__ocean-ripple--one { animation-duration: 860ms; animation-delay: 390ms; }
+  .site-entry__ocean-ripple--two { animation-duration: 920ms; animation-delay: 460ms; }
+
+  .site-entry__shore { animation-duration: 1680ms; animation-delay: 60ms; }
+  .site-entry__shore-wet { animation-duration: 1360ms; animation-delay: 170ms; }
+  .site-entry__backwash { animation-duration: 1100ms; animation-delay: 330ms; }
+
+  .site-entry__marker--1 { animation-duration: 720ms; animation-delay: 250ms; }
+  .site-entry__marker--2 { animation-duration: 720ms; animation-delay: 310ms; }
+  .site-entry__marker--3 { animation-duration: 720ms; animation-delay: 370ms; }
+  .site-entry__marker--4 { animation-duration: 720ms; animation-delay: 430ms; }
+  .site-entry__spray--1 { animation-duration: 500ms; animation-delay: 380ms; }
+  .site-entry__spray--2 { animation-duration: 470ms; animation-delay: 430ms; }
+  .site-entry__spray--3 { animation-duration: 520ms; animation-delay: 480ms; }
+  .site-entry__spray--4 { animation-duration: 490ms; animation-delay: 530ms; }
+
+  .site-entry__track { animation-duration: 1150ms; animation-delay: 160ms; }
+  .site-entry__track::after { animation-duration: 820ms; animation-delay: 240ms; }
+
+  .site-header { animation-duration: 390ms; animation-delay: 1580ms; }
+  .hero-enter { animation-duration: 430ms; }
+  .hero-enter--1 { animation-delay: 1530ms; }
+  .hero-enter--2 { animation-delay: 1580ms; }
+  .hero-enter--3 { animation-delay: 1630ms; }
+  .hero-enter--4 { animation-delay: 1680ms; }
+  .hero-enter--visual { animation-delay: 1550ms; }
+  .hero-enter--5 { animation-delay: 1730ms; }
+  .hero-media-main { animation-duration: 560ms; animation-delay: 1550ms; }
+  .hero-media-main img { animation-duration: 650ms; animation-delay: 1550ms; }
+  .hero-field-card { animation-duration: 450ms; animation-delay: 1700ms; }
+  .hero-status-card { animation-duration: 430ms; animation-delay: 1750ms; }
+
+  html.motion-ready [data-reveal] { transition-duration: 360ms, 360ms; }
+  .operating-flow__line span { transition-duration: 560ms; }
+}
