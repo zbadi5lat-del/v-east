@@ -10,15 +10,21 @@ for(const[l,t]of cases)for(const[w,h]of widths){
  const intro=await p.evaluate(()=>{const e=document.querySelector('.site-entry'),o=document.querySelector('.site-entry__ocean-svg'),lg=document.querySelector('.site-entry__logo');return{display:e?getComputedStyle(e).display:'',entry:e?getComputedStyle(e).animationName:'',ocean:o?getComputedStyle(o).animationName:'',logo:lg?getComputedStyle(lg).animationName:''}});
  A(intro.display!=='none'&&intro.entry==='siteEntryExit'&&intro.ocean==='siteEntryOceanSurge'&&intro.logo==='siteEntryLogoOcean','intro animation active',{l,t,w,...intro});
  await p.evaluate(()=>document.querySelector('.site-entry')?.remove());
- const sw=p.locator('[role="switch"]:visible').first();if(w<1280){await p.locator('#mobile-navigation-toggle').click();await S(80)}
+ let sw;if(w<1280){await p.locator('#mobile-navigation-toggle').click();await S(100);sw=p.locator('#mobile-navigation [role="switch"]');}else{sw=p.locator('.site-header [role="switch"]:visible').first();}
  A(await sw.count()===1,'theme switch reachable',{l,t,w});
+ const beforeTheme=await p.evaluate(()=>document.documentElement.dataset.theme||'');
  const before=await sw.locator('.theme-scene-toggle__orb').evaluate(el=>({tr:getComputedStyle(el).transform,d:getComputedStyle(el).transitionDuration}));
- const rootThemeBefore=await p.evaluate(()=>document.documentElement.dataset.theme||'');
- await sw.evaluate(el=>el.click());await S(620);
+ await sw.click();
+ await p.waitForFunction(prev=>document.documentElement.dataset.theme!==prev,beforeTheme,{timeout:2500});
+ await S(160);
+ const afterTheme=await p.evaluate(()=>document.documentElement.dataset.theme||'');
  const after=await sw.locator('.theme-scene-toggle__orb').evaluate(el=>getComputedStyle(el).transform);
- const rootThemeAfter=await p.evaluate(()=>document.documentElement.dataset.theme||'');
- A(before.d!=='0s'&&before.tr!==after&&rootThemeBefore!==rootThemeAfter,'theme transition moves on viewport',{l,t,w,before,after,rootThemeBefore,rootThemeAfter});
- if(w<1280){await p.keyboard.press('Escape');await S(50)}
+ A(before.d!=='0s'&&beforeTheme!==afterTheme&&before.tr!==after,'theme transition moves on viewport',{l,t,w,beforeTheme,afterTheme,before,after});
+ await S(520);
+ await sw.click();
+ await p.waitForFunction(prev=>document.documentElement.dataset.theme===prev,beforeTheme,{timeout:2500});
+ await S(520);
+ if(w<1280){await p.keyboard.press('Escape');await S(80)}
  await p.evaluate(()=>scrollTo(0,Math.min(420,document.querySelector('#hero')?.scrollHeight||420)));await S(150);
  const hero=await p.evaluate(()=>{const h=document.querySelector('#hero'),q=document.querySelector('.hero-copy-scroll'),v=document.querySelector('.hero-visual-scroll .hero-media-frame'),g=document.querySelector('.hero-operations-grid');return{progress:parseFloat(h?.style.getPropertyValue('--hero-scroll')||'0'),copy:q?getComputedStyle(q).transform:'none',visual:v?getComputedStyle(v).transform:'none',grid:g?getComputedStyle(g).transform:'none'}});
  A(hero.progress>0.02&&hero.copy!=='none'&&hero.visual!=='none'&&hero.grid!=='none','hero scroll motion active',{l,t,w,...hero});
