@@ -16,14 +16,15 @@ for(const[l,t]of cases)for(const[w,h]of widths){
  const before=await sw.locator('.theme-scene-toggle__orb').evaluate(el=>({tr:getComputedStyle(el).transform,d:getComputedStyle(el).transitionDuration}));
  await sw.click();
  await p.waitForFunction(prev=>document.documentElement.dataset.theme!==prev,beforeTheme,{timeout:2500});
- await S(160);
+ await S(650);
  const afterTheme=await p.evaluate(()=>document.documentElement.dataset.theme||'');
- const after=await sw.locator('.theme-scene-toggle__orb').evaluate(el=>getComputedStyle(el).transform);
- A(before.d!=='0s'&&beforeTheme!==afterTheme&&before.tr!==after,'theme transition moves on viewport',{l,t,w,beforeTheme,afterTheme,before,after});
- await S(520);
+ const afterState=await sw.evaluate(el=>({cls:el.className,checked:el.getAttribute('aria-checked'),tr:getComputedStyle(el.querySelector('.theme-scene-toggle__orb')).transform}));
+ const stateOk=afterState.checked===(afterTheme==='dark'?'true':'false')&&afterState.cls.includes(afterTheme==='dark'?'is-dark':'is-light');
+ A(before.d!=='0s'&&beforeTheme!==afterTheme&&stateOk&&before.tr!==afterState.tr,'theme transition moves on viewport',{l,t,w,beforeTheme,afterTheme,before,afterState});
+ await S(120);
  await sw.click();
  await p.waitForFunction(prev=>document.documentElement.dataset.theme===prev,beforeTheme,{timeout:2500});
- await S(520);
+ await S(650);
  if(w<1280){await p.keyboard.press('Escape');await S(80)}
  await p.evaluate(()=>scrollTo(0,Math.min(420,document.querySelector('#hero')?.scrollHeight||420)));await S(150);
  const hero=await p.evaluate(()=>{const h=document.querySelector('#hero'),q=document.querySelector('.hero-copy-scroll'),v=document.querySelector('.hero-visual-scroll .hero-media-frame'),g=document.querySelector('.hero-operations-grid');return{progress:parseFloat(h?.style.getPropertyValue('--hero-scroll')||'0'),copy:q?getComputedStyle(q).transform:'none',visual:v?getComputedStyle(v).transform:'none',grid:g?getComputedStyle(g).transform:'none'}});
