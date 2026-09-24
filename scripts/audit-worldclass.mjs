@@ -59,6 +59,8 @@ check('touch-target-source',header.includes('h-11 w-11')&&header.includes('min-h
 check('drawer-directional',css.includes('html[dir="ltr"] .mobile-navigation-drawer.is-closed')&&css.includes('html[dir="rtl"] .mobile-navigation-drawer.is-closed'),'Drawer direction follows LTR/RTL.');
 check('drawer-semantics',header.includes('aria-modal="true"')&&header.includes('inert={!open}')&&header.includes("event.key==='Escape'"),'Mobile drawer has modal/inert/Escape behavior.');
 check('faq-semantics',faq.includes('aria-expanded={open}')&&faq.includes('aria-controls={panelId}')&&faq.includes('aria-hidden={!open}'),'FAQ disclosure semantics intact.');
+check('faq-reveal-integrity',faq.includes('<div data-reveal="up" data-delay="80" className="flex flex-col gap-3 lg:col-span-7">')&&!faq.includes('key={question} data-reveal="up"'),'FAQ reveal is atomic so scroll timing cannot leave invisible question gaps.');
+check('mobile-motion-present',css.includes('var(--hero-scroll, 0) * -12px')&&css.includes('var(--hero-scroll, 0) * 18px')&&css.includes('@media (prefers-reduced-motion: reduce)'),'Mobile keeps low-amplitude motion while Reduced Motion still disables spatial movement.');
 check('focus-continuity',app.includes('contact.focus({ preventScroll: true })')&&css.includes('.skip-link:focus-visible')&&(header.match(/closeDrawer\(true\)/g)??[]).length>=2,'CTA, skip-link, and drawer focus continuity present.');
 
 check('reduced-motion',css.includes('@media (prefers-reduced-motion: reduce)')&&app.includes("matchMedia('(prefers-reduced-motion: reduce)')"),'CSS and programmatic reduced-motion handling present.');
