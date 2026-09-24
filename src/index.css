@@ -2911,3 +2911,276 @@ html[data-theme="light"] .site-header.is-scrolled .site-header__inner { backgrou
   html.motion-ready [data-reveal] { transition-duration: 360ms, 360ms; }
   .operating-flow__line span { transition-duration: 560ms; }
 }
+
+
+/* ========================================================================== */
+/* 2026-09-24 — Coastline phase-lock v2                                       */
+/* Sea + sand share one compositor timeline; no independent seam translation. */
+/* ========================================================================== */
+
+.site-entry {
+  --intro-total: 2200ms;
+  --intro-coast: 1700ms;
+  --intro-coast-delay: 60ms;
+  --intro-coast-ease: cubic-bezier(.18,.84,.2,1);
+}
+
+.site-entry__coastline {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  pointer-events: none;
+  transform: translate3d(0,0,0);
+  transform-origin: 50% 100%;
+  backface-visibility: hidden;
+}
+
+.site-entry__coastline .site-entry__shore,
+.site-entry__coastline .site-entry__ocean {
+  backface-visibility: hidden;
+}
+
+/* Keep the physical coastline edge stable inside the shared parent. */
+.site-entry__shore {
+  z-index: 1;
+  transform: none;
+}
+.site-entry__ocean {
+  z-index: 2;
+  transform: none;
+}
+.site-entry__ocean-svg {
+  transform-origin: 50% 100%;
+}
+
+/* Reduce paint work exactly at the water/sand boundary. */
+.site-entry__shore {
+  box-shadow: inset 0 10px 22px rgba(255,255,255,.045);
+}
+.site-entry__shore-wet {
+  box-shadow: inset 0 8px 16px rgba(255,255,255,.035);
+}
+.site-entry__backwash {
+  box-shadow: none;
+}
+.site-entry__shore-grain {
+  opacity: .38;
+}
+.site-entry__ocean-foam {
+  filter: none !important;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  /* One shared physical phase: approach -> surge -> settle -> backwash -> exit. */
+  .site-entry__coastline {
+    animation: siteEntryCoastlineSync var(--intro-coast) var(--intro-coast-ease) var(--intro-coast-delay) both;
+  }
+
+  /* Parent containers do not translate independently anymore. */
+  .site-entry__ocean {
+    animation: siteEntryOcean var(--intro-coast) linear var(--intro-coast-delay) both;
+  }
+  .site-entry__shore {
+    animation: siteEntryShoreReveal var(--intro-coast) linear var(--intro-coast-delay) both;
+  }
+
+  /* Water breathes around a fixed bottom edge; the seam stays locked. */
+  .site-entry__ocean-svg {
+    animation: siteEntryOceanSurge var(--intro-coast) var(--intro-coast-ease) var(--intro-coast-delay) both;
+  }
+
+  .site-entry__shore-wet {
+    animation: siteEntryWetSand var(--intro-coast) var(--intro-coast-ease) var(--intro-coast-delay) both;
+  }
+  .site-entry__backwash {
+    animation: siteEntryBackwash var(--intro-coast) var(--intro-coast-ease) var(--intro-coast-delay) both;
+  }
+
+  /* Foam is opacity-only and phase-aligned with the surge. */
+  .site-entry__ocean-foam--one {
+    animation: siteEntryFoamOpacityOne var(--intro-coast) linear var(--intro-coast-delay) both;
+  }
+  .site-entry__ocean-foam--two {
+    animation: siteEntryFoamOpacityTwo var(--intro-coast) linear var(--intro-coast-delay) both;
+  }
+  .site-entry__ocean-foam--three {
+    animation: siteEntryFoamOpacityThree var(--intro-coast) linear var(--intro-coast-delay) both;
+  }
+  .site-entry__ocean-crest {
+    animation: siteEntryCrestOpacity var(--intro-coast) linear var(--intro-coast-delay) both;
+  }
+  .site-entry__ocean-ripple--one,
+  .site-entry__ocean-ripple--two {
+    animation: siteEntryRippleOpacity var(--intro-coast) linear var(--intro-coast-delay) both;
+  }
+
+  /* One coordinated brand timeline instead of unrelated stagger islands. */
+  .site-entry { animation-duration: var(--intro-total); }
+  .site-entry::before { animation-duration: 1500ms; }
+  .site-entry__logo {
+    animation: siteEntryLogoOcean 1560ms var(--ease-emphasized) 0ms both;
+  }
+  .site-entry__orbit--outer {
+    animation-duration: 1220ms;
+    animation-delay: 120ms;
+  }
+  .site-entry__orbit--inner {
+    animation-duration: 1120ms;
+    animation-delay: 180ms;
+  }
+  .site-entry__wordmark {
+    animation: siteEntryWordmarkOcean 1360ms var(--ease-emphasized) 230ms both;
+  }
+  .site-entry__scope {
+    animation: siteEntryScopeOcean 980ms var(--ease-emphasized) 590ms both;
+  }
+  .site-entry__horizon {
+    animation-duration: 1140ms;
+    animation-delay: 120ms;
+  }
+  .site-entry__sweep {
+    animation-duration: 940ms;
+    animation-delay: 210ms;
+  }
+  .site-entry__marker--1 { animation-duration: 660ms; animation-delay: 300ms; }
+  .site-entry__marker--2 { animation-duration: 660ms; animation-delay: 370ms; }
+  .site-entry__marker--3 { animation-duration: 660ms; animation-delay: 440ms; }
+  .site-entry__marker--4 { animation-duration: 660ms; animation-delay: 510ms; }
+  .site-entry__track { animation-duration: 1060ms; animation-delay: 200ms; }
+  .site-entry__track::after { animation-duration: 760ms; animation-delay: 300ms; }
+
+  .site-entry__spray--1 { animation-duration: 470ms; animation-delay: 500ms; }
+  .site-entry__spray--2 { animation-duration: 450ms; animation-delay: 550ms; }
+  .site-entry__spray--3 { animation-duration: 490ms; animation-delay: 600ms; }
+  .site-entry__spray--4 { animation-duration: 460ms; animation-delay: 650ms; }
+
+  /* Hero begins during the final intro resolve, not after a dead pause. */
+  .site-header { animation-delay: 1570ms; }
+  .hero-enter--1 { animation-delay: 1510ms; }
+  .hero-enter--2 { animation-delay: 1560ms; }
+  .hero-enter--3 { animation-delay: 1610ms; }
+  .hero-enter--4 { animation-delay: 1660ms; }
+  .hero-enter--visual { animation-delay: 1530ms; }
+  .hero-enter--5 { animation-delay: 1710ms; }
+  .hero-media-main,
+  .hero-media-main img { animation-delay: 1530ms; }
+  .hero-field-card { animation-delay: 1680ms; }
+  .hero-status-card { animation-delay: 1730ms; }
+
+  @keyframes siteEntryCoastlineSync {
+    0%   { transform: translate3d(0,12px,0) scale3d(1,.988,1); }
+    18%  { transform: translate3d(0,4px,0) scale3d(1,.997,1); }
+    34%  { transform: translate3d(0,-3px,0) scale3d(1,1.006,1); }
+    56%  { transform: translate3d(0,0,0) scale3d(1,1,1); }
+    76%  { transform: translate3d(0,-2px,0) scale3d(1,1.003,1); }
+    100% { transform: translate3d(0,3px,0) scale3d(1,.996,1); }
+  }
+
+  @keyframes siteEntryOcean {
+    0%   { opacity: 0; transform: none; }
+    12%  { opacity: .72; transform: none; }
+    24%, 82% { opacity: 1; transform: none; }
+    100% { opacity: 0; transform: none; }
+  }
+
+  @keyframes siteEntryOceanSurge {
+    0%   { transform: scale3d(1,.965,1); }
+    18%  { transform: scale3d(1,.992,1); }
+    34%  { transform: scale3d(1,1.042,1); }
+    56%  { transform: scale3d(1,.994,1); }
+    76%  { transform: scale3d(1,1.026,1); }
+    100% { transform: scale3d(1,.985,1); }
+  }
+
+  @keyframes siteEntryShoreReveal {
+    0%   { opacity: 0; transform: none; }
+    12%  { opacity: .62; transform: none; }
+    24%, 82% { opacity: .96; transform: none; }
+    100% { opacity: 0; transform: none; }
+  }
+
+  @keyframes siteEntryWetSand {
+    0%   { opacity: .10; transform: scaleY(.78); }
+    18%  { opacity: .28; transform: scaleY(.88); }
+    34%  { opacity: .80; transform: scaleY(1.09); }
+    56%  { opacity: .48; transform: scaleY(.92); }
+    76%  { opacity: .70; transform: scaleY(1.04); }
+    100% { opacity: .18; transform: scaleY(.84); }
+  }
+
+  @keyframes siteEntryBackwash {
+    0%, 24% { opacity: 0; transform: scaleY(.74); }
+    34%  { opacity: .30; transform: scaleY(.92); }
+    56%  { opacity: .52; transform: scaleY(1.04); }
+    76%  { opacity: .18; transform: scaleY(.82); }
+    100% { opacity: 0; transform: scaleY(.72); }
+  }
+
+  @keyframes siteEntryFoamOpacityOne {
+    0%,100% { opacity: .10; }
+    18% { opacity: .30; }
+    34% { opacity: .90; }
+    56% { opacity: .32; }
+    76% { opacity: .68; }
+  }
+  @keyframes siteEntryFoamOpacityTwo {
+    0%,100% { opacity: .06; }
+    24% { opacity: .20; }
+    34% { opacity: .62; }
+    56% { opacity: .24; }
+    76% { opacity: .50; }
+  }
+  @keyframes siteEntryFoamOpacityThree {
+    0%,100% { opacity: .03; }
+    28% { opacity: .12; }
+    34% { opacity: .40; }
+    56% { opacity: .14; }
+    76% { opacity: .34; }
+  }
+  @keyframes siteEntryCrestOpacity {
+    0%,100% { opacity: .18; }
+    34% { opacity: .72; }
+    56% { opacity: .34; }
+    76% { opacity: .58; }
+  }
+  @keyframes siteEntryRippleOpacity {
+    0%,100% { opacity: .10; }
+    34% { opacity: .44; }
+    56% { opacity: .22; }
+    76% { opacity: .38; }
+  }
+
+  @keyframes siteEntryLogoOcean {
+    0%   { opacity: 0; transform: scale(2.15) rotate(-1.5deg); }
+    12%  { opacity: 1; }
+    32%  { opacity: 1; transform: scale(1.055) rotate(.15deg); }
+    44%, 78% { opacity: 1; transform: scale(1) rotate(0); }
+    100% { opacity: 0; transform: scale(.955); }
+  }
+
+  @keyframes siteEntryWordmarkOcean {
+    0%, 10% { opacity: 0; transform: translate3d(0,12px,0) scale(.985); }
+    30%, 78% { opacity: 1; transform: translate3d(0,0,0) scale(1); }
+    100% { opacity: 0; transform: translate3d(0,-5px,0) scale(.99); }
+  }
+
+  @keyframes siteEntryScopeOcean {
+    0%, 12% { opacity: 0; transform: translate3d(0,10px,0); }
+    32%, 76% { opacity: 1; transform: translate3d(0,0,0); }
+    100% { opacity: 0; transform: translate3d(0,-4px,0); }
+  }
+}
+
+@media (max-width: 767px) and (prefers-reduced-motion: no-preference) {
+  .site-entry {
+    --intro-coast: 1580ms;
+    --intro-total: 2100ms;
+  }
+  .site-entry__coastline {
+    animation-timing-function: cubic-bezier(.2,.82,.22,1);
+  }
+  .site-entry__ocean-glaze { display: none; }
+  .site-entry__caustics { display: none; }
+  .site-entry__foam-pockets { display: none; }
+  .site-entry__shore-grain { opacity: .26; }
+}
