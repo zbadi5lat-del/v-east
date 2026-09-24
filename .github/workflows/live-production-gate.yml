@@ -63,6 +63,32 @@ jobs:
           echo "LIVE_URL=$found" >> "$GITHUB_ENV"
           echo "Verified live URL: $found"
 
+      - name: Verify live bundle fingerprint matches current main
+        shell: bash
+        run: |
+          set -euo pipefail
+          live_html=/tmp/live-fingerprint.html
+          curl -L --silent --show-error --max-time 20 "$LIVE_URL" -o "$live_html"
+          local_assets=$(grep -oE '/assets/[^"[:space:]]+\.(js|css)' dist/index.html | sort -u)
+          live_assets=$(grep -oE '/assets/[^"[:space:]]+\.(js|css)' "$live_html" | sort -u)
+          printf 'LOCAL_ASSETS\n%s\nLIVE_ASSETS\n%s\n' "$local_assets" "$live_assets" | tee /tmp/live-fingerprint.txt
+          if [ "$local_assets" != "$live_assets" ]; then
+            echo "::error::Live Vite asset names do not match current main build"
+            exit 2
+          fi
+          while IFS= read -r rel; do
+            [ -n "$rel" ] || continue
+            local_file="dist$rel"
+            live_file="/tmp/live-asset-$(basename "$rel")"
+            curl -L --silent --show-error --max-time 20 "$LIVE_URL$rel" -o "$live_file"
+            local_sha=$(sha256sum "$local_file" | awk '{print $1}')
+            live_sha=$(sha256sum "$live_file" | awk '{print $1}')
+            printf '%s %s %s\n' "$rel" "$local_sha" "$live_sha" | tee -a /tmp/live-fingerprint.txt
+            if [ "$local_sha" != "$live_sha" ]; then
+              echo "::error::Live asset bytes differ from current main build: $rel"
+              exit 3
+            fi
+          done <<< "$local_assets"
       - name: Install browser driver only
         shell: bash
         run: |
@@ -262,6 +288,7 @@ jobs:
           path: |
             /tmp/live-url.txt
             /tmp/probe-summary.txt
+            /tmp/live-fingerprint.txt
             /tmp/live-e2e/results.json
             /tmp/live-e2e/desktop.png
             /tmp/live-e2e/contact.png
