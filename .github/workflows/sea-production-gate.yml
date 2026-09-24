@@ -1,0 +1,153 @@
+name: V.East sea motion production verification
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - ".qa/SEA_PROBE"
+
+permissions:
+  contents: read
+
+jobs:
+  sea:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 8
+    steps:
+      - name: Checkout authoritative main
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 1
+
+      - name: Resolve verified production URL
+        shell: bash
+        run: |
+          set -euo pipefail
+          candidates=(
+            "https://v-east.vercel.app"
+            "https://v-east-git-main-support-lint.vercel.app"
+          )
+          found=""
+          for url in "${candidates[@]}"; do
+            body=/tmp/sea-body.html
+            code=$(curl -L --silent --show-error --max-time 20 -o "$body" -w '%{http_code}' "$url" || true)
+            if [[ "$code" =~ ^2[0-9][0-9]$ ]] && grep -Eiq 'V[.]?EAST|Sports[[:space:]]*&[[:space:]]*Tourism|إدارة وتشغيل' "$body"; then
+              found="$url"
+              break
+            fi
+          done
+          [[ -n "$found" ]] || { echo "::error::No public V.East production alias resolved"; exit 1; }
+          echo "LIVE_URL=$found" >> "$GITHUB_ENV"
+          printf '%s\n' "$found" > /tmp/sea-live-url.txt
+
+      - name: Install browser driver only
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/sea-e2e
+          cd /tmp/sea-e2e
+          npm init -y >/dev/null
+          npm install --no-audit --no-fund playwright-core@1.55.0
+          command -v google-chrome
+
+      - name: Verify natural shoreward/backwash motion
+        shell: bash
+        run: |
+          set -euo pipefail
+          cat > /tmp/sea-e2e/check.mjs <<'NODE'
+          import { chromium } from 'playwright-core';
+          import fs from 'node:fs/promises';
+
+          const url=process.env.LIVE_URL;
+          const browser=await chromium.launch({headless:true,executablePath:'/usr/bin/google-chrome',args:['--no-sandbox','--disable-dev-shm-usage']});
+          const result={url,checks:[],samples:{}};
+          const assert=(ok,name,detail='')=>{result.checks.push({name,pass:!!ok,detail});if(!ok)throw new Error(name+': '+detail);console.log('PASS',name,detail)};
+
+          try{
+            const context=await browser.newContext({viewport:{width:1440,height:900},reducedMotion:'no-preference',colorScheme:'dark'});
+            const page=await context.newPage();
+            const errors=[];
+            page.on('console',m=>m.type()==='error'&&errors.push(m.text()));
+            page.on('pageerror',e=>errors.push(e.message));
+            const resp=await page.goto(url,{waitUntil:'domcontentloaded',timeout:30000});
+            assert(resp?.ok(),'document HTTP 2xx',String(resp?.status()));
+            await page.waitForTimeout(700);
+
+            const first=await page.evaluate(()=>{
+              const ocean=document.querySelector('.site-entry__ocean-svg');
+              const shore=document.querySelector('.site-entry__shore');
+              const wet=document.querySelector('.site-entry__shore-wet');
+              const back=document.querySelector('.site-entry__backwash');
+              const foams=[...document.querySelectorAll('.site-entry__ocean-foam')];
+              if(!ocean||!shore||!wet||!back||foams.length<3)return null;
+              const r=ocean.getBoundingClientRect();
+              return{
+                x:r.x,y:r.y,w:r.width,h:r.height,
+                oceanAnimation:getComputedStyle(ocean).animationName,
+                shoreAnimation:getComputedStyle(shore).animationName,
+                wetAnimation:getComputedStyle(wet).animationName,
+                backwashAnimation:getComputedStyle(back).animationName,
+                shoreOpacity:+getComputedStyle(shore).opacity,
+                wetOpacity:+getComputedStyle(wet).opacity,
+                backwashOpacity:+getComputedStyle(back).opacity,
+                foamAnimations:foams.map(x=>getComputedStyle(x).animationName),
+                foamOpacities:foams.map(x=>+getComputedStyle(x).opacity)
+              };
+            });
+            assert(first,'sea runtime layers exist');
+            assert(first.oceanAnimation==='siteEntryOceanSurge','primary water animation is shoreward/backwash',first.oceanAnimation);
+            assert(first.shoreAnimation==='siteEntryShoreReveal'&&first.wetAnimation==='siteEntryWetSand'&&first.backwashAnimation==='siteEntryBackwash','shore/wet-sand/backwash animations active',JSON.stringify({shore:first.shoreAnimation,wet:first.wetAnimation,back:first.backwashAnimation}));
+            assert(new Set(first.foamAnimations).size>=3,'foam layers use varied breakup timing',first.foamAnimations.join(','));
+
+            await page.waitForTimeout(700);
+            const second=await page.locator('.site-entry__ocean-svg').evaluate(el=>{const r=el.getBoundingClientRect();return{x:r.x,y:r.y,w:r.width,h:r.height}});
+            const dx=Math.abs(second.x-first.x),dy=Math.abs(second.y-first.y);
+            result.samples={first,second,dx,dy};
+            assert(dy>4,'water advances/retreats visibly along shore axis',`dy=${dy.toFixed(2)}px`);
+            assert(dy>dx*1.15,'vertical shoreward motion dominates lateral drift',`dx=${dx.toFixed(2)} dy=${dy.toFixed(2)}`);
+            const active=await page.evaluate(()=>({
+              shore:+getComputedStyle(document.querySelector('.site-entry__shore')).opacity,
+              wet:+getComputedStyle(document.querySelector('.site-entry__shore-wet')).opacity,
+              back:+getComputedStyle(document.querySelector('.site-entry__backwash')).opacity,
+              foam:[...document.querySelectorAll('.site-entry__ocean-foam')].map(x=>+getComputedStyle(x).opacity)
+            }));
+            assert(active.shore>.2&&active.wet>.08,'shore and wet sand visible during surge',JSON.stringify(active));
+            assert(active.foam.some(x=>x>.15),'foam forms during wave cycle',JSON.stringify(active.foam));
+            await page.screenshot({path:'/tmp/sea-e2e/ocean-intro.png',fullPage:false});
+            assert(errors.length===0,'no browser errors',errors.join(' | '));
+            await context.close();
+
+            const mobile=await browser.newContext({viewport:{width:390,height:844},reducedMotion:'no-preference'});
+            const mp=await mobile.newPage();
+            await mp.goto(url,{waitUntil:'domcontentloaded',timeout:30000});
+            await mp.waitForTimeout(1200);
+            const mobileState=await mp.evaluate(()=>({
+              filter:getComputedStyle(document.querySelector('.site-entry__ocean-svg')).filter,
+              spray6:getComputedStyle(document.querySelector('.site-entry__spray--6')).display,
+              spray7:getComputedStyle(document.querySelector('.site-entry__spray--7')).display,
+              overflow:document.documentElement.scrollWidth>innerWidth+2
+            }));
+            assert(mobileState.filter==='none'&&mobileState.spray6==='none'&&mobileState.spray7==='none','mobile ocean performance fallback active',JSON.stringify(mobileState));
+            assert(!mobileState.overflow,'mobile sea entrance has no horizontal overflow');
+            await mp.screenshot({path:'/tmp/sea-e2e/ocean-intro-mobile.png',fullPage:false});
+            await mobile.close();
+          }finally{
+            await browser.close();
+            await fs.writeFile('/tmp/sea-e2e/results.json',JSON.stringify(result,null,2));
+          }
+          NODE
+          cd /tmp/sea-e2e
+          node check.mjs
+
+      - name: Upload sea evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: veast-sea-motion-evidence
+          path: |
+            /tmp/sea-live-url.txt
+            /tmp/sea-e2e/results.json
+            /tmp/sea-e2e/ocean-intro.png
+            /tmp/sea-e2e/ocean-intro-mobile.png
+          if-no-files-found: warn
