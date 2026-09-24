@@ -20,6 +20,17 @@ jobs:
           ref: main
           fetch-depth: 1
 
+      - name: Install project dependencies
+        run: npm install --no-audit --no-fund --package-lock=false
+
+      - name: Source and production build regression gates
+        run: |
+          npm run verify:source
+          npm run verify:worldclass
+          npm run verify:final-experience
+          npm run lint
+          npm run build
+
       - name: Resolve verified production URL
         shell: bash
         run: |
