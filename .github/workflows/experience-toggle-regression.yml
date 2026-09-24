@@ -71,6 +71,29 @@ jobs:
           CHROME_PATH="$(command -v google-chrome || command -v chromium || command -v chromium-browser)"
           PREVIEW_URL="http://127.0.0.1:4173" CHROME_PATH="$CHROME_PATH" node scripts/experience-toggle-regression.mjs
 
+      - name: Prepare matrix browser module path
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/live-e2e
+          cd /tmp/live-e2e
+          npm init -y >/dev/null
+          npm install --no-audit --no-fund playwright-core@1.55.0
+
+      - name: Local responsive motion matrix
+        shell: bash
+        run: |
+          set -euo pipefail
+          CHROME_PATH="$(command -v google-chrome || command -v chromium || command -v chromium-browser)"
+          LIVE_URL="http://127.0.0.1:4173" CHROME_PATH="$CHROME_PATH" timeout --signal=TERM --kill-after=10s 180s node scripts/responsive-motion-matrix.mjs
+
+      - name: Local full production matrix
+        shell: bash
+        run: |
+          set -euo pipefail
+          CHROME_PATH="$(command -v google-chrome || command -v chromium || command -v chromium-browser)"
+          LIVE_URL="http://127.0.0.1:4173" CHROME_PATH="$CHROME_PATH" timeout --signal=TERM --kill-after=10s 240s node scripts/live-production-matrix.mjs
+
       - name: Preview log
         if: always()
         run: cat /tmp/veast-preview.log || true
