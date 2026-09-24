@@ -22,12 +22,46 @@ export function FloatingWhatsApp({selectedFacility}:FloatingWhatsAppProps){
     const heroCta=document.getElementById('hero-primary-cta');
     const contact=document.getElementById('contact-section');
     if(!heroCta)return;
-    let heroPassed=false,contactVisible=false;
-    const update=()=>setVisible(heroPassed&&!contactVisible);
-    const heroObserver=new IntersectionObserver(([entry])=>{if(entry){heroPassed=!entry.isIntersecting&&entry.boundingClientRect.top<0;update()}},{threshold:0.1});
-    const contactObserver=contact?new IntersectionObserver(([entry])=>{contactVisible=Boolean(entry?.isIntersecting);update()},{threshold:0.15}):null;
-    heroObserver.observe(heroCta); if(contact&&contactObserver)contactObserver.observe(contact);
-    return()=>{heroObserver.disconnect();contactObserver?.disconnect()};
+
+    let frame=0;
+    let lastVisible=false;
+
+    const measure=()=>{
+      frame=0;
+      const viewportHeight=Math.max(window.innerHeight,1);
+      const heroRect=heroCta.getBoundingClientRect();
+      const heroPassed=heroRect.bottom<0;
+
+      let contactVisible=false;
+      if(contact){
+        const contactRect=contact.getBoundingClientRect();
+        const visibleHeight=Math.max(0,Math.min(contactRect.bottom,viewportHeight)-Math.max(contactRect.top,0));
+        const visibleRatio=visibleHeight/Math.max(contactRect.height,1);
+        contactVisible=visibleRatio>=0.15;
+      }
+
+      const nextVisible=heroPassed&&!contactVisible;
+      if(nextVisible!==lastVisible){
+        lastVisible=nextVisible;
+        setVisible(nextVisible);
+      }
+    };
+
+    const schedule=()=>{
+      if(!frame)frame=requestAnimationFrame(measure);
+    };
+
+    measure();
+    window.addEventListener('scroll',schedule,{passive:true});
+    window.addEventListener('resize',schedule,{passive:true});
+    window.addEventListener('orientationchange',schedule);
+
+    return()=>{
+      cancelAnimationFrame(frame);
+      window.removeEventListener('scroll',schedule);
+      window.removeEventListener('resize',schedule);
+      window.removeEventListener('orientationchange',schedule);
+    };
   },[]);
 
   useEffect(()=>{ if(!visible) setResourcesOpen(false); },[visible]);
