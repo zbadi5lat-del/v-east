@@ -89,6 +89,37 @@ try {
 
   const response = await page.goto(url, { waitUntil: 'networkidle', timeout: 30000 });
   if (!response?.ok()) throw new Error(`Preview HTTP ${response?.status()}`);
+
+  const cadence = await page.evaluate(async () => {
+    const samples = [];
+    let start = performance.now();
+    let last = start;
+    return await new Promise((resolve) => {
+      const tick = (now) => {
+        samples.push(now - last);
+        last = now;
+        if (now - start < 1100) {
+          requestAnimationFrame(tick);
+          return;
+        }
+        const clean = samples.slice(2).sort((a, b) => a - b);
+        const pick = (q) => clean[Math.min(clean.length - 1, Math.floor((clean.length - 1) * q))] || 0;
+        const slow = clean.filter((value) => value > 34).length;
+        resolve({
+          frames: clean.length,
+          median: +pick(0.5).toFixed(2),
+          p95: +pick(0.95).toFixed(2),
+          slowRatio: +(slow / Math.max(clean.length, 1)).toFixed(3),
+        });
+      };
+      requestAnimationFrame(tick);
+    });
+  });
+  if (!(cadence.frames >= 20 && cadence.median <= 35.5 && cadence.p95 <= Math.max(55, cadence.median * 1.8) && cadence.slowRatio <= 0.35)) {
+    throw new Error(`Local intro cadence regression: ${JSON.stringify(cadence)}`);
+  }
+  console.log('PASS local-intro-cadence', JSON.stringify(cadence));
+
   await page.evaluate(() => document.querySelector('.site-entry')?.remove());
   await sleep(150);
 
