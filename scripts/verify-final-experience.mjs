@@ -11,6 +11,7 @@ const content = read('src/content.ts');
 const floating = read('src/components/FloatingWhatsApp.tsx');
 const header = read('src/components/Header.tsx');
 const hero = read('src/components/Hero.tsx');
+const faq = read('src/components/FAQ.tsx');
 const entrance = read('src/components/SiteEntrance.tsx');
 const css = read('src/index.css');
 const i18n = read('src/i18n.ts');
