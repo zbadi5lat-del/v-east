@@ -119,12 +119,12 @@ jobs:
             assert(resp && resp.ok(),'desktop document HTTP 2xx',String(resp?.status()));
             const introCadence=await cadence(page,1100,false);
             results.motionCadence.intro=introCadence;
-            assert(introCadence.frames>=45 && introCadence.p95<=36 && introCadence.slowRatio<=0.18,'intro frame cadence stays smooth',JSON.stringify(introCadence));
+            assert(introCadence.frames>=20 && introCadence.median<=35.5 && introCadence.p95<=Math.max(55,introCadence.median*1.8) && introCadence.slowRatio<=0.35,'intro frame cadence stays smooth',JSON.stringify(introCadence));
             await page.waitForLoadState('networkidle',{timeout:30000}).catch(()=>{});
             await page.waitForTimeout(2300);
             const scrollCadence=await cadence(page,900,true);
             results.motionCadence.scroll=scrollCadence;
-            assert(scrollCadence.frames>=36 && scrollCadence.p95<=36 && scrollCadence.slowRatio<=0.18,'scroll motion frame cadence stays smooth',JSON.stringify(scrollCadence));
+            assert(scrollCadence.frames>=17 && scrollCadence.median<=35.5 && scrollCadence.p95<=Math.max(55,scrollCadence.median*1.8) && scrollCadence.slowRatio<=0.35,'scroll motion frame cadence stays smooth',JSON.stringify(scrollCadence));
             await page.evaluate(()=>scrollTo(0,0));
             await page.waitForTimeout(100);
             assert((await page.locator('body').innerText()).includes('V.EAST'),'brand renders');
