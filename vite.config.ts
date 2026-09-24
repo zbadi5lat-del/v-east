@@ -18,19 +18,16 @@ export default defineConfig({
     {
       name: 'veast-release-fingerprint',
       transformIndexHtml() {
-        return {
-          html: '',
-          tags: [
-            {
-              tag: 'meta',
-              attrs: {
-                name: 'veast-release',
-                content: releaseSha,
-              },
-              injectTo: 'head',
+        return [
+          {
+            tag: 'meta',
+            attrs: {
+              name: 'veast-release',
+              content: releaseSha,
             },
-          ],
-        };
+            injectTo: 'head',
+          },
+        ];
       },
     },
   ],
