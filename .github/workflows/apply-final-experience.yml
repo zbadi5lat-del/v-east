@@ -38,8 +38,13 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          base64 -d .source/final-text-patch.b64 > /tmp/veast-final-text-patch.tgz
-          echo "596a2757cb96f1ab95a5796f5b2009f975717db9a7a9acf88b016c94bc4d511e  /tmp/veast-final-text-patch.tgz" | sha256sum -c -
+          cat .source/final-text-patch.xz.b64.part00 \
+              .source/final-text-patch.xz.b64.part01 \
+              .source/final-text-patch.xz.b64.part02 \
+              > /tmp/veast-final-text-patch.xz.b64
+          test "$(wc -c < /tmp/veast-final-text-patch.xz.b64)" -eq 52496
+          base64 -d /tmp/veast-final-text-patch.xz.b64 > /tmp/veast-final-text-patch.tar.xz
+          echo "f784b89e9f65d524c423ff6b4fab9746b0311574075916c02abed7ea224bb732  /tmp/veast-final-text-patch.tar.xz" | sha256sum -c -
           python - <<'PY'
           import tarfile
           allowed = {
@@ -57,7 +62,7 @@ jobs:
             'src/components/Hero.tsx',
             'src/components/SiteEntrance.tsx',
           }
-          with tarfile.open('/tmp/veast-final-text-patch.tgz', 'r:gz') as tf:
+          with tarfile.open('/tmp/veast-final-text-patch.tar.xz', 'r:xz') as tf:
               members = [m for m in tf.getmembers() if m.isfile()]
               actual = {m.name.removeprefix('./') for m in members}
               if actual != allowed:
