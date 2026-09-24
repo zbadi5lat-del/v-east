@@ -13,6 +13,7 @@ const header = read('src/components/Header.tsx');
 const hero = read('src/components/Hero.tsx');
 const faq = read('src/components/FAQ.tsx');
 const entrance = read('src/components/SiteEntrance.tsx');
+const places = read('src/components/FeaturedPlaces.tsx');
 const css = read('src/index.css');
 const i18n = read('src/i18n.ts');
 
@@ -47,6 +48,8 @@ check('natural-foam-breakup', entrance.includes('site-entry__ocean-foam--three')
 check('mobile-ocean-performance', css.includes('.site-entry__ocean-svg,') && css.includes('.site-entry__water-surface,') && css.includes('.site-entry__foam-organic { filter: none; }') && css.includes('.site-entry__foam-pockets path:nth-child(n+4)') && css.includes('.site-entry__spray--7 { display: none; }'), 'Mobile disables expensive ocean/foam displacement filters and trims decorative detail while retaining the core motion story.');
 check('light-pillars-readable', css.includes('html[data-theme="light"] .dark-feature-card {') && css.includes('linear-gradient(180deg, rgba(255,255,255,.98), rgba(237,244,241,.96))') && css.includes('.dark-feature-card .text-slate-300 { color:#52676B !important; }'), 'Light-mode pillar cards use a light coastal surface with explicit readable title/body colors.');
 check('faq-atomic-reveal', faq.includes('<div data-reveal="up" data-delay="80" className="flex flex-col gap-3 lg:col-span-7">') && !faq.includes('key={question} data-reveal="up"'), 'FAQ items reveal as one stack so unrevealed rows cannot leave invisible layout gaps.');
+check('compact-logo-venues', places.includes('place-logo-grid') && places.includes('place-logo-card__mark') && places.includes('place-logo-card__name') && places.includes('data-venue-id={card.id}') && !places.includes('place-mini-stat') && !places.includes('card.summary}</p>'), 'Featured venues are compact logo-first triggers with venue names beneath, while full details remain in the dialog.');
+check('light-pdf-launcher-readable', css.includes('html[data-theme="light"] .floating-contact--resources {') && css.includes('color:#102A33 !important;') && css.includes('.floating-contact--resources svg { color:#176782; }') && css.includes('.floating-resources__eyebrow { color:#765522; }'), 'Light-mode PDF launcher and panel accents use explicit readable foreground colors.');
 check('no-persistent-will-change', !/will-change\s*:/i.test(css), 'No persistent will-change hints.');
 
 const failures = checks.filter(x => x.status === 'FAIL');
