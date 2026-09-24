@@ -1,0 +1,58 @@
+name: V.East d377 live fingerprint
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - ".github/workflows/d377-live-fingerprint.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  fingerprint:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 8
+    steps:
+      - name: Checkout authoritative main
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 1
+
+      - name: Build authoritative main
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "d3774f11a9743d902d149d4185a2939f46786592"
+          npm install --no-audit --no-fund --package-lock=false
+          npm run build
+
+      - name: Compare production bundle bytes
+        shell: bash
+        run: |
+          set -euo pipefail
+          live="https://v-east.vercel.app"
+          curl -L --silent --show-error --max-time 30 "$live/" -o /tmp/live.html
+          local_assets=$(grep -oE '/assets/[^"[:space:]]+\.(js|css)' dist/index.html | sort -u)
+          live_assets=$(grep -oE '/assets/[^"[:space:]]+\.(js|css)' /tmp/live.html | sort -u)
+          printf 'LOCAL\n%s\nLIVE\n%s\n' "$local_assets" "$live_assets" | tee /tmp/fingerprint.txt
+          if [ "$local_assets" != "$live_assets" ]; then
+            echo "::error::Production asset names do not match d377 authoritative main"
+            exit 2
+          fi
+          while IFS= read -r asset; do
+            [ -n "$asset" ] || continue
+            curl -L --silent --show-error --max-time 30 "$live$asset" -o "/tmp/$(basename "$asset")"
+            local_sha=$(sha256sum "dist$asset" | awk '{print $1}')
+            live_sha=$(sha256sum "/tmp/$(basename "$asset")" | awk '{print $1}')
+            printf '%s %s %s\n' "$asset" "$local_sha" "$live_sha" | tee -a /tmp/fingerprint.txt
+            test "$local_sha" = "$live_sha"
+          done <<< "$local_assets"
+
+      - name: Upload fingerprint evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: veast-d377-live-fingerprint
+          path: /tmp/fingerprint.txt
+          if-no-files-found: warn
