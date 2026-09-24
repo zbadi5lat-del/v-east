@@ -73,6 +73,49 @@ jobs:
           npm install --no-audit --no-fund playwright-core@1.55.0
           command -v google-chrome || command -v chromium || command -v chromium-browser
 
+      - name: Verify production security headers
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl -L --silent --show-error --max-time 20 -D /tmp/live-security-headers.txt -o /dev/null "$LIVE_URL"
+          python3 - <<'PY'
+          from pathlib import Path
+          raw=Path('/tmp/live-security-headers.txt').read_text(encoding='utf-8',errors='replace')
+          blocks=[block for block in raw.replace('\r\n','\n').split('\n\n') if block.strip()]
+          final=blocks[-1].splitlines() if blocks else []
+          headers={}
+          for line in final[1:]:
+              if ':' not in line: continue
+              key,value=line.split(':',1)
+              headers[key.strip().lower()]=value.strip()
+          required={
+              'x-content-type-options':'nosniff',
+              'referrer-policy':'strict-origin-when-cross-origin',
+              'x-frame-options':'DENY',
+              'permissions-policy':'camera=(), microphone=(), geolocation=(), payment=(), usb=()',
+              'x-permitted-cross-domain-policies':'none',
+          }
+          failures=[]
+          for key,value in required.items():
+              actual=headers.get(key,'')
+              if actual.lower()!=value.lower():
+                  failures.append(f'{key}: expected={value!r} actual={actual!r}')
+          csp=headers.get('content-security-policy','')
+          for token in ("frame-ancestors 'none'","base-uri 'self'","object-src 'none'"):
+              if token not in csp:
+                  failures.append(f'content-security-policy missing {token!r}: {csp!r}')
+          if failures:
+              raise SystemExit('Live security headers failed: '+ ' | '.join(failures))
+          print('PASS live production security headers')
+          PY
+
+      - name: Live historical bug-class regression
+        shell: bash
+        run: |
+          set -euo pipefail
+          CHROME_PATH="$(command -v google-chrome || command -v chromium || command -v chromium-browser)"
+          PREVIEW_URL="$LIVE_URL" CHROME_PATH="$CHROME_PATH" timeout --signal=TERM --kill-after=10s 240s node scripts/historical-regression-matrix.mjs
+
       - name: Live browser E2E
         shell: bash
         run: |
@@ -262,6 +305,7 @@ jobs:
           path: |
             /tmp/live-url.txt
             /tmp/probe-summary.txt
+            /tmp/live-security-headers.txt
             /tmp/live-e2e/results.json
             /tmp/live-e2e/desktop.png
             /tmp/live-e2e/contact.png
