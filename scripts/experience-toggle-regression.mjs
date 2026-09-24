@@ -69,6 +69,43 @@ async function clickHeaderControl(page, selector) {
   if (!clicked) throw new Error(`Missing header control: ${selector}`);
 }
 
+async function assertAllSectorCardsVisible(page, phase) {
+  const state = await page.evaluate(() => {
+    const cards = [...document.querySelectorAll('#sectors .sector-card')];
+    return {
+      count: cards.length,
+      cards: cards.map((card) => {
+        const style = getComputedStyle(card);
+        const rect = card.getBoundingClientRect();
+        return {
+          opacity: Number.parseFloat(style.opacity || '1'),
+          display: style.display,
+          visibility: style.visibility,
+          width: rect.width,
+          height: rect.height,
+          revealed: card.getAttribute('data-revealed'),
+          visibleClass: card.classList.contains('is-visible'),
+        };
+      }),
+    };
+  });
+  const bad = state.cards.filter((card) =>
+    card.opacity < 0.94 ||
+    card.display === 'none' ||
+    card.visibility === 'hidden' ||
+    card.width <= 0 ||
+    card.height <= 0
+  );
+  if (state.count !== 7 || bad.length) {
+    throw new Error(`${phase}: sectors blank after in-place experience switch: ${JSON.stringify(state)}`);
+  }
+  console.log('PASS', phase, 'all-sector-cards-visible', JSON.stringify(state.cards.map((card) => ({
+    opacity: card.opacity,
+    revealed: card.revealed,
+    visibleClass: card.visibleClass,
+  }))));
+}
+
 try {
   const context = await browser.newContext({
     viewport: { width: 1366, height: 768 },
@@ -94,6 +131,41 @@ try {
 
   let expectedTheme = 'dark';
   let expectedLanguage = 'ar';
+
+  // Exact user-reported reproduction: stay on Sectors, switch theme/language repeatedly,
+  // and verify every card remains rendered without a page refresh.
+  await page.locator('#sectors').scrollIntoViewIfNeeded();
+  await sleep(900);
+
+  await clickHeaderControl(page, '.site-header [role="switch"]');
+  expectedTheme = 'light';
+  await page.waitForFunction(() => document.documentElement.dataset.theme === 'light', { timeout: 2500 });
+  await sleep(420);
+  await assertAllSectorCardsVisible(page, 'sectors-after-dark-to-light');
+
+  await clickHeaderControl(page, '.site-header .language-toggle button:last-child');
+  expectedLanguage = 'en';
+  await page.waitForFunction(() => document.documentElement.lang === 'en', { timeout: 2500 });
+  await sleep(420);
+  await assertAllSectorCardsVisible(page, 'sectors-after-ar-to-en');
+
+  await clickHeaderControl(page, '.site-header .language-toggle button:first-child');
+  expectedLanguage = 'ar';
+  await page.waitForFunction(() => document.documentElement.lang === 'ar', { timeout: 2500 });
+  await sleep(420);
+  await assertAllSectorCardsVisible(page, 'sectors-after-en-to-ar');
+
+  await clickHeaderControl(page, '.site-header [role="switch"]');
+  expectedTheme = 'dark';
+  await page.waitForFunction(() => document.documentElement.dataset.theme === 'dark', { timeout: 2500 });
+  await sleep(420);
+  await assertAllSectorCardsVisible(page, 'sectors-after-light-to-dark');
+
+  await clickHeaderControl(page, '.site-header [role="switch"]');
+  expectedTheme = 'light';
+  await page.waitForFunction(() => document.documentElement.dataset.theme === 'light', { timeout: 2500 });
+  await sleep(420);
+  await assertAllSectorCardsVisible(page, 'sectors-after-dark-to-light-repeat');
 
   for (const selector of sectionSelectors) {
     await page.locator(selector).scrollIntoViewIfNeeded();
