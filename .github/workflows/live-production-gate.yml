@@ -154,6 +154,13 @@ jobs:
           npm install --no-audit --no-fund playwright-core@1.55.0
           command -v google-chrome || command -v chromium || command -v chromium-browser
 
+      - name: Live historical bug-class regression
+        shell: bash
+        run: |
+          set -euo pipefail
+          CHROME_PATH="$(command -v google-chrome || command -v chromium || command -v chromium-browser)"
+          PREVIEW_URL="$LIVE_URL" CHROME_PATH="$CHROME_PATH" timeout --signal=TERM --kill-after=10s 240s node scripts/historical-regression-matrix.mjs
+
       - name: Live browser E2E
         shell: bash
         run: |
