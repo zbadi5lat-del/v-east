@@ -1,9 +1,8 @@
-name: V.East exact GitHub source package
+name: V.East exact coastline-v2 package
 
 on:
-  workflow_dispatch:
   push:
-    branches: [main]
+    branches: ["release/package-coastline-v2"]
     paths:
       - ".github/workflows/package-source.yml"
 
@@ -15,14 +14,16 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 10
     steps:
-      - name: Checkout exact main commit
+      - name: Checkout exact verified main commit
         uses: actions/checkout@v4
         with:
+          ref: 8adfd73763b2e2fd4cffd47bd85a5b0b7c022a2a
           fetch-depth: 1
 
-      - name: Verify current source before packaging
+      - name: Verify exact source before packaging
         run: |
           set -euo pipefail
+          test "$(git rev-parse HEAD)" = "8adfd73763b2e2fd4cffd47bd85a5b0b7c022a2a"
           npm install --no-audit --no-fund --package-lock=false
           npm run verify:source
           npm run verify:worldclass
@@ -36,24 +37,17 @@ jobs:
           set -euo pipefail
           mkdir -p /tmp/veast-package
           git rev-parse HEAD | tee /tmp/veast-package/GITHUB_COMMIT.txt
-          git archive             --format=zip             --prefix=V_East_Corporate_Website_FINAL_GITHUB/             --output=/tmp/veast-package/V_East_Corporate_Website_FINAL_GITHUB_20260924.zip             HEAD
-          (
-            cd /tmp/veast-package
-            sha256sum V_East_Corporate_Website_FINAL_GITHUB_20260924.zip               > V_East_Corporate_Website_FINAL_GITHUB_20260924_SHA256.txt
-          )
-          unzip -t /tmp/veast-package/V_East_Corporate_Website_FINAL_GITHUB_20260924.zip
+          git archive --format=zip --prefix=V_East_Corporate_Website_COASTLINE_SYNC_V2/ --output=/tmp/veast-package/V_East_Corporate_Website_COASTLINE_SYNC_V2_20260924.zip HEAD
+          (cd /tmp/veast-package && sha256sum V_East_Corporate_Website_COASTLINE_SYNC_V2_20260924.zip > V_East_Corporate_Website_COASTLINE_SYNC_V2_20260924_SHA256.txt)
+          unzip -t /tmp/veast-package/V_East_Corporate_Website_COASTLINE_SYNC_V2_20260924.zip
 
       - name: Upload exact GitHub source package
         uses: actions/upload-artifact@v4
         with:
-          name: veast-exact-github-source
+          name: veast-coastline-sync-v2-exact
           path: |
             /tmp/veast-package/GITHUB_COMMIT.txt
-            /tmp/veast-package/V_East_Corporate_Website_FINAL_GITHUB_20260924.zip
-            /tmp/veast-package/V_East_Corporate_Website_FINAL_GITHUB_20260924_SHA256.txt
+            /tmp/veast-package/V_East_Corporate_Website_COASTLINE_SYNC_V2_20260924.zip
+            /tmp/veast-package/V_East_Corporate_Website_COASTLINE_SYNC_V2_20260924_SHA256.txt
           if-no-files-found: error
           compression-level: 0
-
-# final-package-trigger: compact-logo-venues-pdf-visibility-20260924
-
-# final-smooth-motion-release: 2026-09-24
