@@ -1,0 +1,73 @@
+name: V.East exact live fingerprint for aa0f
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - ".github/workflows/final-live-fingerprint-aa0f.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  fingerprint:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 12
+    steps:
+      - name: Checkout authoritative main
+        uses: actions/checkout@v7
+        with:
+          ref: main
+          fetch-depth: 1
+          persist-credentials: false
+
+      - name: Setup Node
+        uses: actions/setup-node@v7
+        with:
+          node-version: 22
+
+      - name: Install and build
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "aa0f3ba7c670607c22fe58fb4ee3eec33b187b28"
+          npm install --no-audit --no-fund --package-lock=false
+          npm run verify
+          
+      - name: Compare production assets byte-for-byte
+        shell: bash
+        run: |
+          set -euo pipefail
+          candidates=(
+            "https://v-east-support-lint.vercel.app"
+            "https://v-east.vercel.app"
+            "https://v-east-git-main-support-lint.vercel.app"
+          )
+          live=""
+          for url in "${candidates[@]}"; do
+            body=/tmp/live.html
+            code=$(curl -L --silent --show-error --max-time 20 -o "$body" -w '%{http_code}' "$url" || true)
+            if [[ "$code" =~ ^2[0-9][0-9]$ ]] && grep -Eiq 'V[.]?EAST|Sports[[:space:]]*&[[:space:]]*Tourism|إدارة وتشغيل' "$body"; then
+              live="$url"
+              break
+            fi
+          done
+          test -n "$live"
+          local_assets=$(grep -oE '/assets/[^"[:space:]]+\.(js|css)' dist/index.html | sort -u)
+          live_assets=$(grep -oE '/assets/[^"[:space:]]+\.(js|css)' /tmp/live.html | sort -u)
+          echo "LOCAL_ASSETS"
+          echo "$local_assets"
+          echo "LIVE_ASSETS"
+          echo "$live_assets"
+          if [ "$local_assets" != "$live_assets" ]; then
+            echo "::error::Production asset names do not match authoritative main aa0f"
+            exit 2
+          fi
+          while IFS= read -r rel; do
+            [ -n "$rel" ] || continue
+            curl -L --silent --show-error --max-time 20 "$live$rel" -o "/tmp/$(basename "$rel")"
+            local_sha=$(sha256sum "dist$rel" | awk '{print $1}')
+            live_sha=$(sha256sum "/tmp/$(basename "$rel")" | awk '{print $1}')
+            echo "$rel local=$local_sha live=$live_sha"
+            test "$local_sha" = "$live_sha"
+          done <<< "$local_assets"
+          echo "EXACT_LIVE_FINGERPRINT_PASS $live aa0f3ba7c670607c22fe58fb4ee3eec33b187b28"
