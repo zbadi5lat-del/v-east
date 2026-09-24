@@ -208,7 +208,7 @@ jobs:
           }
           NODE
           cd /tmp/live-e2e
-          node check.mjs
+          timeout --signal=TERM --kill-after=10s 120s node check.mjs
 
       - name: Responsive motion matrix
         shell: bash
@@ -216,14 +216,14 @@ jobs:
           set -euo pipefail
           mkdir -p /tmp/responsive-motion
           node --check scripts/responsive-motion-matrix.mjs
-          node scripts/responsive-motion-matrix.mjs
+          timeout --signal=TERM --kill-after=10s 180s node scripts/responsive-motion-matrix.mjs
 
       - name: Full legacy-equivalent production matrices
         shell: bash
         run: |
           set -euo pipefail
           node --check scripts/live-production-matrix.mjs
-          node scripts/live-production-matrix.mjs
+          timeout --signal=TERM --kill-after=10s 240s node scripts/live-production-matrix.mjs
 
       - name: Upload live evidence
         if: always()
