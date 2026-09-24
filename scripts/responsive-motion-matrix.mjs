@@ -36,7 +36,7 @@ for(const[l,t]of cases)for(const[w,h]of widths){
  const pdfState=await pdf.evaluate(el=>{const s=getComputedStyle(el),svg=el.querySelector('svg'),r=el.getBoundingClientRect();return{opacity:+s.opacity,pointer:s.pointerEvents,color:s.color,bg:s.backgroundColor,svg:svg?getComputedStyle(svg).color:'',visible:r.width>=44&&r.height>=44&&r.bottom>0&&r.top<innerHeight}});
  A(pdfState.opacity>.95&&pdfState.pointer!=='none'&&pdfState.visible,'PDF launcher visible after hero',{l,t,w,...pdfState});
  if(t==='light')A(pdfState.color==='rgb(16, 42, 51)'&&pdfState.svg==='rgb(23, 103, 130)','light PDF launcher readable',{l,w,...pdfState});
- await pdf.click();await S(160);
+ await pdf.click();await S(340);
  const panel=await p.locator('#floating-pdf-panel').evaluate(el=>{const s=getComputedStyle(el),links=[...el.querySelectorAll('a[href$=".pdf"]')],title=el.querySelector('.floating-resources__title'),eye=el.querySelector('.floating-resources__eyebrow');return{opacity:+s.opacity,pointer:s.pointerEvents,links:links.length,title:title?getComputedStyle(title).color:'',eyebrow:eye?getComputedStyle(eye).color:''}});
  A(panel.opacity>.9&&panel.pointer!=='none'&&panel.links===3,'PDF panel opens with three downloads',{l,t,w,...panel});
  if(t==='light')A(panel.title==='rgb(16, 42, 51)'&&panel.eyebrow==='rgb(118, 85, 34)','light PDF panel readable',{l,w,...panel});
