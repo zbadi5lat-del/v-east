@@ -18,6 +18,9 @@ export function Hero({ onPrimaryCtaClick }: HeroProps) {
     let frame = 0;
     let top = 0;
     let height = 1;
+    let current = 0;
+    let target = 0;
+    let lastTime = performance.now();
 
     const measure = () => {
       const rect = hero.getBoundingClientRect();
@@ -25,20 +28,35 @@ export function Hero({ onPrimaryCtaClick }: HeroProps) {
       height = Math.max(hero.offsetHeight, 1);
     };
 
-    const paint = () => {
-      frame = 0;
+    const readTarget = () => {
       const raw = (window.scrollY - top) / Math.max(height * 0.72, 1);
-      const progress = Math.min(1, Math.max(0, raw));
-      hero.style.setProperty('--hero-scroll', progress.toFixed(4));
+      target = Math.min(1, Math.max(0, raw));
+    };
+
+    const paint = (time: number) => {
+      frame = 0;
+      const dt = Math.min(Math.max((time - lastTime) / 1000, 1 / 120), 0.05);
+      lastTime = time;
+      const alpha = 1 - Math.exp(-18 * dt);
+      current += (target - current) * alpha;
+      if (Math.abs(target - current) < 0.0006) current = target;
+      hero.style.setProperty('--hero-scroll', current.toFixed(4));
+      if (current !== target) frame = requestAnimationFrame(paint);
     };
 
     const schedule = () => {
-      if (!frame) frame = requestAnimationFrame(paint);
+      readTarget();
+      if (!frame) {
+        lastTime = performance.now();
+        frame = requestAnimationFrame(paint);
+      }
     };
 
     const onResize = () => { measure(); schedule(); };
     measure();
-    paint();
+    readTarget();
+    current = target;
+    hero.style.setProperty('--hero-scroll', current.toFixed(4));
     window.addEventListener('scroll', schedule, { passive: true });
     window.addEventListener('resize', onResize, { passive: true });
     return () => {
