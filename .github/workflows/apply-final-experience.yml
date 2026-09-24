@@ -96,9 +96,9 @@ jobs:
           from pathlib import Path
 
           files = [
-              Path("public/pdfs/V-EAST-Company-Profile.pdf"),
-              Path("public/pdfs/V-EAST-Services-Operations.pdf"),
-              Path("public/pdfs/V-EAST-Portfolio-Featured-Venues.pdf"),
+              Path("public/downloads/V-EAST-Company-Profile.pdf"),
+              Path("public/downloads/V-EAST-Services-Operations.pdf"),
+              Path("public/downloads/V-EAST-Portfolio-Featured-Venues.pdf"),
           ]
 
           for path in files:
