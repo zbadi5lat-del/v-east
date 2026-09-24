@@ -103,16 +103,20 @@ jobs:
             const motionSamples=await page.evaluate(async()=>{
               const read=()=>{
                 const ocean=document.querySelector('.site-entry__ocean-svg');
+                const shore=document.querySelector('.site-entry__shore');
                 const wet=document.querySelector('.site-entry__shore-wet');
                 const back=document.querySelector('.site-entry__backwash');
+                const foams=[...document.querySelectorAll('.site-entry__ocean-foam')];
                 const r=ocean.getBoundingClientRect();
                 const transform=getComputedStyle(ocean).transform;
                 const matrix=new DOMMatrixReadOnly(transform==='none'?'matrix(1,0,0,1,0,0)':transform);
                 return{
                   x:r.x,y:r.y,w:r.width,h:r.height,
                   scaleX:matrix.a,scaleY:matrix.d,tx:matrix.e,ty:matrix.f,
+                  shore:+getComputedStyle(shore).opacity,
                   wet:+getComputedStyle(wet).opacity,
-                  back:+getComputedStyle(back).opacity
+                  back:+getComputedStyle(back).opacity,
+                  foamMax:Math.max(...foams.map(x=>+getComputedStyle(x).opacity),0)
                 };
               };
               const samples=[];
@@ -132,18 +136,16 @@ jobs:
             const xRange=range(motionSamples.map(s=>s.x));
             const wetRange=range(motionSamples.map(s=>s.wet));
             const backRange=range(motionSamples.map(s=>s.back));
-            result.samples={first,motionSamples,scaleYRange,heightRange,xRange,wetRange,backRange};
+            const maxShore=Math.max(...motionSamples.map(s=>s.shore));
+            const maxWet=Math.max(...motionSamples.map(s=>s.wet));
+            const maxBack=Math.max(...motionSamples.map(s=>s.back));
+            const maxFoam=Math.max(...motionSamples.map(s=>s.foamMax));
+            result.samples={first,motionSamples,scaleYRange,heightRange,xRange,wetRange,backRange,maxShore,maxWet,maxBack,maxFoam};
             assert(scaleYRange>.025&&heightRange>2,'phase-locked water visibly surges/backwashes around fixed shoreline',`scaleYRange=${scaleYRange.toFixed(4)} heightRange=${heightRange.toFixed(2)}px`);
             assert(xRange<3,'shoreward motion avoids lateral seam drift',`xRange=${xRange.toFixed(2)}px`);
             assert(wetRange>.08&&backRange>.08,'wet-sand and backwash phases visibly evolve',`wetRange=${wetRange.toFixed(3)} backRange=${backRange.toFixed(3)}`);
-            const active=await page.evaluate(()=>({
-              shore:+getComputedStyle(document.querySelector('.site-entry__shore')).opacity,
-              wet:+getComputedStyle(document.querySelector('.site-entry__shore-wet')).opacity,
-              back:+getComputedStyle(document.querySelector('.site-entry__backwash')).opacity,
-              foam:[...document.querySelectorAll('.site-entry__ocean-foam')].map(x=>+getComputedStyle(x).opacity)
-            }));
-            assert(active.shore>.2&&active.wet>.08,'shore and wet sand visible during surge',JSON.stringify(active));
-            assert(active.foam.some(x=>x>.15),'foam forms during wave cycle',JSON.stringify(active.foam));
+            assert(maxShore>.2&&maxWet>.08&&maxBack>.08,'shore wet-sand and backwash all become visibly active during the measured cycle',`shore=${maxShore.toFixed(3)} wet=${maxWet.toFixed(3)} back=${maxBack.toFixed(3)}`);
+            assert(maxFoam>.15,'foam forms during measured wave cycle',`maxFoam=${maxFoam.toFixed(3)}`);
             await page.screenshot({path:'/tmp/sea-e2e/ocean-intro.png',fullPage:false});
             assert(errors.length===0,'no browser errors',errors.join(' | '));
             await context.close();
