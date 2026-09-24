@@ -83,10 +83,30 @@ jobs:
 
           const url = process.env.LIVE_URL;
           const chrome = process.env.CHROME_PATH || '/usr/bin/google-chrome';
-          const results = { url, checks: [], consoleErrors: [] };
+          const results = { url, checks: [], consoleErrors: [], motionCadence: {} };
           const pass = (name, detail='') => { results.checks.push({name, pass:true, detail}); console.log('PASS', name, detail); };
           const fail = (name, detail='') => { results.checks.push({name, pass:false, detail}); throw new Error(name + (detail ? ': ' + detail : '')); };
           const assert = (cond, name, detail='') => cond ? pass(name, detail) : fail(name, detail);
+          const cadence = async (page, duration=1000, scroll=false) => page.evaluate(async ({duration,scroll}) => {
+            const samples=[];
+            let start=performance.now(), last=start;
+            return await new Promise(resolve=>{
+              const tick=now=>{
+                samples.push(now-last); last=now;
+                const elapsed=now-start;
+                if(scroll) scrollTo(0, Math.min(900, (elapsed/duration)*900));
+                if(elapsed<duration) requestAnimationFrame(tick);
+                else {
+                  const clean=samples.slice(2).sort((a,b)=>a-b);
+                  const pick=q=>clean[Math.min(clean.length-1,Math.floor((clean.length-1)*q))]||0;
+                  const avg=clean.reduce((a,b)=>a+b,0)/Math.max(clean.length,1);
+                  const slow=clean.filter(x=>x>34).length;
+                  resolve({frames:clean.length,avg:+avg.toFixed(2),median:+pick(.5).toFixed(2),p95:+pick(.95).toFixed(2),slow34:slow,slowRatio:+(slow/Math.max(clean.length,1)).toFixed(3)});
+                }
+              };
+              requestAnimationFrame(tick);
+            });
+          },{duration,scroll});
 
           const browser = await chromium.launch({headless:true, executablePath:chrome,args:['--no-sandbox','--disable-dev-shm-usage']});
           try {
@@ -95,9 +115,18 @@ jobs:
             page.on('console', msg => { if(msg.type()==='error') results.consoleErrors.push(msg.text()); });
             page.on('pageerror', err => results.consoleErrors.push('PAGEERROR: '+err.message));
 
-            const resp=await page.goto(url,{waitUntil:'networkidle',timeout:30000});
+            const resp=await page.goto(url,{waitUntil:'domcontentloaded',timeout:30000});
             assert(resp && resp.ok(),'desktop document HTTP 2xx',String(resp?.status()));
-            await page.waitForTimeout(3800);
+            const introCadence=await cadence(page,1100,false);
+            results.motionCadence.intro=introCadence;
+            assert(introCadence.frames>=45 && introCadence.p95<=36 && introCadence.slowRatio<=0.18,'intro frame cadence stays smooth',JSON.stringify(introCadence));
+            await page.waitForLoadState('networkidle',{timeout:30000}).catch(()=>{});
+            await page.waitForTimeout(2300);
+            const scrollCadence=await cadence(page,900,true);
+            results.motionCadence.scroll=scrollCadence;
+            assert(scrollCadence.frames>=36 && scrollCadence.p95<=36 && scrollCadence.slowRatio<=0.18,'scroll motion frame cadence stays smooth',JSON.stringify(scrollCadence));
+            await page.evaluate(()=>scrollTo(0,0));
+            await page.waitForTimeout(100);
             assert((await page.locator('body').innerText()).includes('V.EAST'),'brand renders');
             assert(await page.locator('h1').count()===1,'exactly one H1');
             assert(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+2),'desktop no horizontal overflow');
