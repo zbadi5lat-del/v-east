@@ -41,6 +41,8 @@ pass(!/src="https?:\/\//i.test(source),'Production image sources must remain loc
 for(const tag of [...source.matchAll(/<a\b[^>]*target="_blank"[^>]*>/g)].map(m=>m[0])) pass(/rel="noopener noreferrer"/.test(tag),'Every target=_blank link must use noopener noreferrer.');
 
 const pkg=JSON.parse(fs.readFileSync(path.join(root,'package.json'),'utf8')); const deps=new Set([...Object.keys(pkg.dependencies??{}),...Object.keys(pkg.devDependencies??{})]);
+const lockPath=path.join(root,'package-lock.json'); const lockExists=fs.existsSync(lockPath); const lock=lockExists?JSON.parse(fs.readFileSync(lockPath,'utf8')):null;
+pass(lockExists&&lock?.lockfileVersion===3&&lock?.packages?.['']?.name===pkg.name,'Committed npm lockfile v3 must match the application package for reproducible builds.');
 for(const dep of ['@google/genai','express','dotenv','motion','framer-motion']) pass(!deps.has(dep),`Unnecessary dependency present: ${dep}`);
 pass(indexHtml.includes('type="application/ld+json"')&&indexHtml.includes('property="og:image"')&&indexHtml.includes('twitter:card'),'SEO/social/structured metadata foundation must remain present.');
 pass(source.includes('setMeta(\'meta[name="description"]\'')&&source.includes('meta[property="og:locale"]'),'Localized metadata must update with language.');
