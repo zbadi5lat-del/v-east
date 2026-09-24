@@ -8,6 +8,8 @@ function walk(dir){return fs.readdirSync(dir,{withFileTypes:true}).flatMap(e=>{c
 const files=walk(root); const srcFiles=walk(path.join(root,'src')); const source=srcFiles.map(f=>fs.readFileSync(f,'utf8')).join('\n');
 const indexHtml=fs.readFileSync(path.join(root,'index.html'),'utf8'); const productionText=source+'\n'+indexHtml;
 const i18n=fs.readFileSync(path.join(root,'src','i18n.ts'),'utf8'); const app=fs.readFileSync(path.join(root,'src','App.tsx'),'utf8');
+const viteConfig=fs.readFileSync(path.join(root,'vite.config.ts'),'utf8');
+const liveGate=fs.readFileSync(path.join(root,'.github','workflows','live-production-gate.yml'),'utf8');
 const failures=[]; const pass=(c,m)=>{if(!c)failures.push(m)};
 
 for(const value of ['01280033504','01061950609','v.east000@gmail.com','201280033504','إدارة وتشغيل المنشآت الرياضية','الإشراف والمتابعة والتقييم الميداني','Sports facility management & operations','Field supervision, follow-up & evaluation']) pass(productionText.includes(value),`Missing approved/localized content: ${value}`);
@@ -43,6 +45,8 @@ for(const dep of ['@google/genai','express','dotenv','motion','framer-motion']) 
 pass(indexHtml.includes('type="application/ld+json"')&&indexHtml.includes('property="og:image"')&&indexHtml.includes('twitter:card'),'SEO/social/structured metadata foundation must remain present.');
 pass(source.includes('setMeta(\'meta[name="description"]\'')&&source.includes('meta[property="og:locale"]'),'Localized metadata must update with language.');
 pass(source.includes('useScrollReveal')&&source.includes('data-reveal="image"'),'Content-linked reveal motion must remain wired.');
+pass(viteConfig.includes("name: 'veast-release'")&&viteConfig.includes('VERCEL_GIT_COMMIT_SHA')&&viteConfig.includes('VEAST_RELEASE_SHA'),'Build must embed an auditable release fingerprint with Vercel/GitHub override support.');
+pass(liveGate.includes('Verify exact deployed commit fingerprint and security headers')&&liveGate.includes('EXPECTED_MAIN=')&&liveGate.includes('LIVE_RELEASE=')&&liveGate.includes('PASS live security headers'),'Live production gate must reject stale Vercel deployments and missing security headers.');
 pass(productionText.includes('@media (prefers-reduced-motion: reduce)'),'Reduced-motion CSS is required.');
 pass(!/animation\s*:[^;]*infinite/i.test(productionText),'Decorative infinite animation is forbidden.');
 pass(!/will-change\s*:/i.test(productionText),'Persistent will-change is forbidden.');
