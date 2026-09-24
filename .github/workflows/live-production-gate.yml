@@ -21,7 +21,7 @@ jobs:
           fetch-depth: 1
 
       - name: Install project dependencies
-        run: npm install --no-audit --no-fund --package-lock=false
+        run: npm ci --no-audit --no-fund
 
       - name: Source and production build regression gates
         run: |
@@ -158,6 +158,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
+          npm install --no-audit --no-fund --no-save --package-lock=false playwright-core@1.55.0
           CHROME_PATH="$(command -v google-chrome || command -v chromium || command -v chromium-browser)"
           PREVIEW_URL="$LIVE_URL" CHROME_PATH="$CHROME_PATH" timeout --signal=TERM --kill-after=10s 240s node scripts/historical-regression-matrix.mjs
 
@@ -344,7 +345,7 @@ jobs:
 
       - name: Upload live evidence
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: veast-live-evidence
           path: |
