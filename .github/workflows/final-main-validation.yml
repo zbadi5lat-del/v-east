@@ -1,0 +1,125 @@
+name: V.East authoritative main final validation
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - ".github/workflows/final-main-validation.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 18
+    steps:
+      - name: Checkout authoritative main
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 1
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Install project dependencies
+        run: npm install --no-audit --no-fund --package-lock=false
+
+      - name: Source build gates
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "d3774f11a9743d902d149d4185a2939f46786592"
+          npm run verify:source
+          npm run verify:worldclass
+          npm run verify:final-experience
+          npm run lint
+          npm run build
+
+      - name: Install browser library
+        run: npm install --no-audit --no-fund --no-save --package-lock=false playwright-core@1.55.0
+
+      - name: Start production preview
+        shell: bash
+        run: |
+          set -euo pipefail
+          npm run preview -- --port 4173 > /tmp/veast-preview.log 2>&1 &
+          echo $! > /tmp/veast-preview.pid
+          for attempt in {1..30}; do
+            if curl --silent --fail http://127.0.0.1:4173/ >/dev/null; then
+              exit 0
+            fi
+            sleep 1
+          done
+          cat /tmp/veast-preview.log
+          exit 1
+
+      - name: Exact no-refresh experience regression
+        shell: bash
+        run: |
+          set -euo pipefail
+          CHROME_PATH="$(command -v google-chrome || command -v chromium || command -v chromium-browser)"
+          PREVIEW_URL="http://127.0.0.1:4173" CHROME_PATH="$CHROME_PATH" node scripts/experience-toggle-regression.mjs
+
+      - name: Prepare matrix module path
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/live-e2e
+          cd /tmp/live-e2e
+          npm init -y >/dev/null
+          npm install --no-audit --no-fund playwright-core@1.55.0
+
+      - name: Responsive motion matrix
+        shell: bash
+        run: |
+          set -euo pipefail
+          CHROME_PATH="$(command -v google-chrome || command -v chromium || command -v chromium-browser)"
+          LIVE_URL="http://127.0.0.1:4173" CHROME_PATH="$CHROME_PATH" timeout --signal=TERM --kill-after=10s 180s node scripts/responsive-motion-matrix.mjs
+
+      - name: Full production matrix
+        shell: bash
+        run: |
+          set -euo pipefail
+          CHROME_PATH="$(command -v google-chrome || command -v chromium || command -v chromium-browser)"
+          LIVE_URL="http://127.0.0.1:4173" CHROME_PATH="$CHROME_PATH" timeout --signal=TERM --kill-after=10s 240s node scripts/live-production-matrix.mjs
+
+      - name: Create exact main package
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/veast-final
+          git rev-parse HEAD | tee /tmp/veast-final/GITHUB_COMMIT.txt
+          git archive \
+            --format=zip \
+            --prefix=V_East_Corporate_Website_FINAL_GITHUB_d3774f11/ \
+            --output=/tmp/veast-final/V_East_FINAL_SEND_TO_FRIEND_GITHUB_d3774f11_20260924.zip \
+            HEAD
+          cd /tmp/veast-final
+          sha256sum V_East_FINAL_SEND_TO_FRIEND_GITHUB_d3774f11_20260924.zip > V_East_FINAL_SEND_TO_FRIEND_GITHUB_d3774f11_20260924_SHA256.txt
+          unzip -t V_East_FINAL_SEND_TO_FRIEND_GITHUB_d3774f11_20260924.zip
+
+      - name: Upload final package
+        uses: actions/upload-artifact@v4
+        with:
+          name: veast-d377-authoritative-final
+          path: |
+            /tmp/veast-final/GITHUB_COMMIT.txt
+            /tmp/veast-final/V_East_FINAL_SEND_TO_FRIEND_GITHUB_d3774f11_20260924.zip
+            /tmp/veast-final/V_East_FINAL_SEND_TO_FRIEND_GITHUB_d3774f11_20260924_SHA256.txt
+          compression-level: 0
+          if-no-files-found: error
+
+      - name: Preview log
+        if: always()
+        run: cat /tmp/veast-preview.log || true
+
+      - name: Stop preview
+        if: always()
+        shell: bash
+        run: |
+          if [ -f /tmp/veast-preview.pid ]; then
+            kill "$(cat /tmp/veast-preview.pid)" 2>/dev/null || true
+          fi
