@@ -411,3 +411,5 @@ try {
 } finally {
   await browser.close();
 }
+
+// final current-main verification trigger: aa0f3ba7 2026-09-25
