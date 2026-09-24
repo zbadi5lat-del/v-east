@@ -53,3 +53,5 @@ jobs:
             /tmp/veast-package/V_East_Corporate_Website_FINAL_GITHUB_20260924_SHA256.txt
           if-no-files-found: error
           compression-level: 0
+
+# final-package-trigger: compact-logo-venues-pdf-visibility-20260924
