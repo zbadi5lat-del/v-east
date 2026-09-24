@@ -28,6 +28,7 @@ export function useScrollReveal() {
     root.classList.add('motion-ready');
 
     let observer: IntersectionObserver | null = null;
+    let refreshFrame = 0;
 
     const reveal = (element: HTMLElement) => {
       element.dataset.revealed = 'true';
@@ -38,12 +39,13 @@ export function useScrollReveal() {
     const prepare = (element: HTMLElement) => {
       applyRevealDelay(element);
 
-      if (reducedMotionQuery.matches || !observer) {
-        reveal(element);
-        return;
-      }
-
-      if (element.dataset.revealed === 'true' || isInsideRevealViewport(element)) {
+      if (
+        reducedMotionQuery.matches ||
+        !observer ||
+        root.dataset.experienceSwitching === 'true' ||
+        element.dataset.revealed === 'true' ||
+        isInsideRevealViewport(element)
+      ) {
         reveal(element);
         return;
       }
@@ -68,24 +70,19 @@ export function useScrollReveal() {
       scope.querySelectorAll<HTMLElement>(REVEAL_SELECTOR).forEach(prepare);
     };
 
-    scan();
-
-    const mutationObserver = new MutationObserver((mutations) => {
-      for (const mutation of mutations) {
-        if (mutation.type !== 'childList') continue;
-        mutation.addedNodes.forEach((node) => {
-          if (node instanceof HTMLElement) scan(node);
-        });
-      }
-    });
-
-    if (document.body) mutationObserver.observe(document.body, { childList: true, subtree: true });
-
-    let refreshFrame = 0;
     const refresh = () => {
       window.cancelAnimationFrame(refreshFrame);
       refreshFrame = window.requestAnimationFrame(() => scan());
     };
+
+    scan();
+
+    const mutationObserver = new MutationObserver((mutations) => {
+      if (!mutations.some((mutation) => mutation.type === 'childList' && mutation.addedNodes.length > 0)) return;
+      refresh();
+    });
+
+    if (document.body) mutationObserver.observe(document.body, { childList: true, subtree: true });
 
     window.addEventListener(EXPERIENCE_CHANGE_EVENT, refresh);
     reducedMotionQuery.addEventListener('change', refresh);
