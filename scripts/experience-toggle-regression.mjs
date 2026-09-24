@@ -8,107 +8,193 @@ const browser = await chromium.launch({
   args: ['--no-sandbox', '--disable-dev-shm-usage'],
 });
 
-const sectionSelectors = [
-  '#services',
-  '#sectors',
-  '#operating-system',
-  '#field-operations',
-  '#why-veast',
-  '#faq',
-];
-
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
-async function visibleRevealState(page, selector) {
-  return page.evaluate((target) => {
-    const section = document.querySelector(target);
-    if (!section) return { missing: true, count: 0, hidden: [] };
-    const viewportHeight = window.innerHeight;
-    const nodes = [...section.querySelectorAll('[data-reveal]')].filter((node) => {
-      const rect = node.getBoundingClientRect();
-      const style = getComputedStyle(node);
-      const visibleHeight = Math.max(0, Math.min(rect.bottom, viewportHeight * 0.9) - Math.max(rect.top, 0));
-      const visibleRatio = rect.height > 0 ? visibleHeight / rect.height : 0;
-      return style.display !== 'none' &&
-        style.visibility !== 'hidden' &&
-        rect.height > 0 &&
-        visibleRatio >= 0.2;
-    });
-    return {
-      missing: false,
-      count: nodes.length,
-      hidden: nodes
-        .filter((node) => Number.parseFloat(getComputedStyle(node).opacity || '1') < 0.94)
-        .map((node) => ({
-          tag: node.tagName,
-          reveal: node.getAttribute('data-reveal'),
-          className: node.className,
-          opacity: getComputedStyle(node).opacity,
-        })),
-    };
-  }, selector);
-}
+const criticalSections = [
+  { section: '#sectors', items: '#sectors .sector-card', expected: 7, name: 'sectors' },
+  { section: '#field-operations', items: '#field-operations .field-card', expected: 3, name: 'field-operations' },
+];
 
-async function assertVisible(page, selector, phase) {
-  const state = await visibleRevealState(page, selector);
-  if (state.missing) throw new Error(`${phase}: missing section ${selector}`);
-  if (state.count < 1) throw new Error(`${phase}: no viewport reveal nodes in ${selector}`);
-  if (state.hidden.length) {
-    throw new Error(`${phase}: hidden reveal nodes after experience change in ${selector}: ${JSON.stringify(state.hidden)}`);
+async function primeRevealSection(page, sectionSelector) {
+  const nodes = page.locator(`${sectionSelector} [data-reveal]`);
+  const count = await nodes.count();
+  if (count < 1) throw new Error(`No reveal nodes in ${sectionSelector}`);
+
+  for (let index = 0; index < count; index += 1) {
+    await nodes.nth(index).scrollIntoViewIfNeeded();
+    await sleep(140);
   }
-  console.log('PASS', phase, selector, `visible=${state.count}`);
+
+  await page.locator(sectionSelector).scrollIntoViewIfNeeded();
+  await sleep(520);
 }
 
-async function clickHeaderControl(page, selector) {
-  const clicked = await page.evaluate((query) => {
-    const element = document.querySelector(query);
-    if (!(element instanceof HTMLElement)) return false;
-    element.click();
-    return true;
-  }, selector);
-  if (!clicked) throw new Error(`Missing header control: ${selector}`);
-}
+async function assertSectionFullyVisible(page, { section, items, expected, name }, phase) {
+  const result = await page.evaluate(({ section, items, expected }) => {
+    const sectionEl = document.querySelector(section);
+    const itemEls = [...document.querySelectorAll(items)];
+    const revealEls = sectionEl ? [...sectionEl.querySelectorAll('[data-reveal]')] : [];
 
-async function assertAllSectorCardsVisible(page, phase) {
-  const state = await page.evaluate(() => {
-    const cards = [...document.querySelectorAll('#sectors .sector-card')];
+    const inspect = (element) => {
+      const style = getComputedStyle(element);
+      const rect = element.getBoundingClientRect();
+      return {
+        opacity: Number.parseFloat(style.opacity || '1'),
+        display: style.display,
+        visibility: style.visibility,
+        width: rect.width,
+        height: rect.height,
+        pending: element.classList.contains('reveal-pending'),
+        visibleClass: element.classList.contains('is-visible'),
+        revealed: element.getAttribute('data-revealed'),
+      };
+    };
+
     return {
-      count: cards.length,
-      cards: cards.map((card) => {
-        const style = getComputedStyle(card);
-        const rect = card.getBoundingClientRect();
+      sectionExists: Boolean(sectionEl),
+      expected,
+      itemCount: itemEls.length,
+      items: itemEls.map(inspect),
+      reveals: revealEls.map(inspect),
+      overflow: document.documentElement.scrollWidth > innerWidth + 2,
+    };
+  }, { section, items, expected });
+
+  const badItems = result.items.filter((item) =>
+    item.opacity < 0.94 ||
+    item.display === 'none' ||
+    item.visibility === 'hidden' ||
+    item.width <= 0 ||
+    item.height <= 0 ||
+    item.pending
+  );
+  const badReveals = result.reveals.filter((item) =>
+    item.opacity < 0.94 ||
+    item.display === 'none' ||
+    item.visibility === 'hidden' ||
+    item.width <= 0 ||
+    item.height <= 0 ||
+    item.pending
+  );
+
+  if (!result.sectionExists || result.itemCount !== expected || badItems.length || badReveals.length || result.overflow) {
+    throw new Error(`${phase} ${name}: ${JSON.stringify(result)}`);
+  }
+
+  if (name === 'field-operations') {
+    const images = await page.locator('#field-operations .field-card img').evaluateAll((elements) =>
+      elements.map((image) => {
+        const rect = image.getBoundingClientRect();
+        const style = getComputedStyle(image);
         return {
+          naturalWidth: image.naturalWidth,
+          naturalHeight: image.naturalHeight,
+          width: rect.width,
+          height: rect.height,
           opacity: Number.parseFloat(style.opacity || '1'),
           display: style.display,
           visibility: style.visibility,
-          width: rect.width,
-          height: rect.height,
-          revealed: card.getAttribute('data-revealed'),
-          visibleClass: card.classList.contains('is-visible'),
         };
       }),
-    };
-  });
-  const bad = state.cards.filter((card) =>
-    card.opacity < 0.94 ||
-    card.display === 'none' ||
-    card.visibility === 'hidden' ||
-    card.width <= 0 ||
-    card.height <= 0
-  );
-  if (state.count !== 7 || bad.length) {
-    throw new Error(`${phase}: sectors blank after in-place experience switch: ${JSON.stringify(state)}`);
+    );
+    if (images.length !== 3 || images.some((image) =>
+      image.naturalWidth <= 0 ||
+      image.naturalHeight <= 0 ||
+      image.width <= 0 ||
+      image.height <= 0 ||
+      image.opacity < 0.94 ||
+      image.display === 'none' ||
+      image.visibility === 'hidden'
+    )) {
+      throw new Error(`${phase} field-images: ${JSON.stringify(images)}`);
+    }
   }
-  console.log('PASS', phase, 'all-sector-cards-visible', JSON.stringify(state.cards.map((card) => ({
-    opacity: card.opacity,
-    revealed: card.revealed,
-    visibleClass: card.visibleClass,
-  }))));
+
+  console.log('PASS', phase, name, `items=${result.itemCount} reveals=${result.reveals.length}`);
 }
 
-try {
+async function switchAndWatch(page, controlSelector, itemSelector, expected, phase) {
+  const result = await page.evaluate(async ({ controlSelector, itemSelector, expected }) => {
+    const control = document.querySelector(controlSelector);
+    if (!(control instanceof HTMLElement)) return { missingControl: true, failures: ['missing-control'] };
+
+    const failures = [];
+    const samples = [];
+    const started = performance.now();
+    let minOpacity = 1;
+    let minCount = Number.POSITIVE_INFINITY;
+
+    control.click();
+
+    await new Promise((resolve) => {
+      const tick = (now) => {
+        const items = [...document.querySelectorAll(itemSelector)];
+        minCount = Math.min(minCount, items.length);
+        const sample = items.map((item) => {
+          const style = getComputedStyle(item);
+          const rect = item.getBoundingClientRect();
+          const opacity = Number.parseFloat(style.opacity || '1');
+          minOpacity = Math.min(minOpacity, opacity);
+          return {
+            opacity,
+            display: style.display,
+            visibility: style.visibility,
+            width: rect.width,
+            height: rect.height,
+            pending: item.classList.contains('reveal-pending'),
+          };
+        });
+
+        if (
+          items.length !== expected ||
+          sample.some((item) =>
+            item.opacity < 0.94 ||
+            item.display === 'none' ||
+            item.visibility === 'hidden' ||
+            item.width <= 0 ||
+            item.height <= 0 ||
+            item.pending
+          )
+        ) {
+          failures.push({ at: +(now - started).toFixed(1), count: items.length, sample });
+        }
+
+        samples.push({ at: +(now - started).toFixed(1), count: items.length, min: sample.length ? Math.min(...sample.map((item) => item.opacity)) : 0 });
+
+        if (now - started < 700) requestAnimationFrame(tick);
+        else resolve();
+      };
+      requestAnimationFrame(tick);
+    });
+
+    return {
+      missingControl: false,
+      failures,
+      sampleCount: samples.length,
+      minOpacity,
+      minCount,
+      language: document.documentElement.lang,
+      direction: document.documentElement.dir,
+      theme: document.documentElement.dataset.theme,
+      switching: document.documentElement.dataset.experienceSwitching || '',
+    };
+  }, { controlSelector, itemSelector, expected });
+
+  if (result.missingControl || result.failures.length || result.minCount !== expected || result.minOpacity < 0.94) {
+    throw new Error(`${phase}: transient blank detected: ${JSON.stringify(result)}`);
+  }
+  console.log('PASS', phase, JSON.stringify({
+    samples: result.sampleCount,
+    minOpacity: result.minOpacity,
+    minCount: result.minCount,
+    language: result.language,
+    theme: result.theme,
+  }));
+}
+
+async function runViewport(width, height) {
   const context = await browser.newContext({
-    viewport: { width: 1366, height: 768 },
+    viewport: { width, height },
     reducedMotion: 'no-preference',
     colorScheme: 'dark',
   });
@@ -127,73 +213,53 @@ try {
   const response = await page.goto(url, { waitUntil: 'networkidle', timeout: 30000 });
   if (!response?.ok()) throw new Error(`Preview HTTP ${response?.status()}`);
   await page.evaluate(() => document.querySelector('.site-entry')?.remove());
-  await sleep(150);
+  await sleep(180);
 
-  let expectedTheme = 'dark';
-  let expectedLanguage = 'ar';
+  for (const target of criticalSections) {
+    await primeRevealSection(page, target.section);
+    await assertSectionFullyVisible(page, target, `before-switch-${width}`);
 
-  // Exact user-reported reproduction: stay on Sectors, switch theme/language repeatedly,
-  // and verify every card remains rendered without a page refresh.
-  await page.locator('#sectors').scrollIntoViewIfNeeded();
-  await sleep(900);
-
-  await clickHeaderControl(page, '.site-header [role="switch"]');
-  expectedTheme = 'light';
-  await page.waitForFunction(() => document.documentElement.dataset.theme === 'light', { timeout: 2500 });
-  await sleep(420);
-  await assertAllSectorCardsVisible(page, 'sectors-after-dark-to-light');
-
-  await clickHeaderControl(page, '.site-header .language-toggle button:last-child');
-  expectedLanguage = 'en';
-  await page.waitForFunction(() => document.documentElement.lang === 'en', { timeout: 2500 });
-  await sleep(420);
-  await assertAllSectorCardsVisible(page, 'sectors-after-ar-to-en');
-
-  await clickHeaderControl(page, '.site-header .language-toggle button:first-child');
-  expectedLanguage = 'ar';
-  await page.waitForFunction(() => document.documentElement.lang === 'ar', { timeout: 2500 });
-  await sleep(420);
-  await assertAllSectorCardsVisible(page, 'sectors-after-en-to-ar');
-
-  await clickHeaderControl(page, '.site-header [role="switch"]');
-  expectedTheme = 'dark';
-  await page.waitForFunction(() => document.documentElement.dataset.theme === 'dark', { timeout: 2500 });
-  await sleep(420);
-  await assertAllSectorCardsVisible(page, 'sectors-after-light-to-dark');
-
-  await clickHeaderControl(page, '.site-header [role="switch"]');
-  expectedTheme = 'light';
-  await page.waitForFunction(() => document.documentElement.dataset.theme === 'light', { timeout: 2500 });
-  await sleep(420);
-  await assertAllSectorCardsVisible(page, 'sectors-after-dark-to-light-repeat');
-
-  for (const selector of sectionSelectors) {
-    await page.locator(selector).scrollIntoViewIfNeeded();
-    await sleep(780);
-    await assertVisible(page, selector, 'before-toggle');
-
-    expectedTheme = expectedTheme === 'dark' ? 'light' : 'dark';
-    await clickHeaderControl(page, '.site-header [role="switch"]');
-    await page.waitForFunction(
-      (theme) => document.documentElement.dataset.theme === theme,
-      expectedTheme,
-      { timeout: 2500 },
+    await switchAndWatch(
+      page,
+      '.site-header .language-toggle button:last-child',
+      target.items,
+      target.expected,
+      `${target.name}-ar-to-en-${width}`,
     );
-    await sleep(360);
-    await assertVisible(page, selector, 'after-theme-toggle');
+    if (!(await page.evaluate(() => document.documentElement.lang === 'en' && document.documentElement.dir === 'ltr'))) {
+      throw new Error(`${target.name}: English root state failed`);
+    }
+    await assertSectionFullyVisible(page, target, `after-ar-to-en-${width}`);
 
-    expectedLanguage = expectedLanguage === 'ar' ? 'en' : 'ar';
-    const languageSelector = expectedLanguage === 'en'
-      ? '.site-header .language-toggle button:last-child'
-      : '.site-header .language-toggle button:first-child';
-    await clickHeaderControl(page, languageSelector);
-    await page.waitForFunction(
-      (language) => document.documentElement.lang === language,
-      expectedLanguage,
-      { timeout: 2500 },
+    await switchAndWatch(
+      page,
+      '.site-header [role="switch"]',
+      target.items,
+      target.expected,
+      `${target.name}-dark-to-light-${width}`,
     );
-    await sleep(420);
-    await assertVisible(page, selector, 'after-language-toggle');
+    if ((await page.evaluate(() => document.documentElement.dataset.theme)) !== 'light') {
+      throw new Error(`${target.name}: light theme state failed`);
+    }
+    await assertSectionFullyVisible(page, target, `after-dark-to-light-${width}`);
+
+    await switchAndWatch(
+      page,
+      '.site-header .language-toggle button:first-child',
+      target.items,
+      target.expected,
+      `${target.name}-en-to-ar-${width}`,
+    );
+    await assertSectionFullyVisible(page, target, `after-en-to-ar-${width}`);
+
+    await switchAndWatch(
+      page,
+      '.site-header [role="switch"]',
+      target.items,
+      target.expected,
+      `${target.name}-light-to-dark-${width}`,
+    );
+    await assertSectionFullyVisible(page, target, `after-light-to-dark-${width}`);
   }
 
   const rootState = await page.evaluate(() => ({
@@ -202,11 +268,17 @@ try {
     theme: document.documentElement.dataset.theme,
     overflow: document.documentElement.scrollWidth > innerWidth + 2,
   }));
-  if (rootState.overflow) throw new Error('Horizontal overflow after repeated experience toggles');
-  if (errors.length) throw new Error(`Browser errors: ${errors.join(' | ')}`);
 
-  console.log('PASS experience-toggle-regression', JSON.stringify(rootState));
+  if (rootState.overflow) throw new Error(`Horizontal overflow at ${width}px`);
+  if (errors.length) throw new Error(`Browser errors at ${width}px: ${errors.join(' | ')}`);
+
+  console.log('PASS experience-toggle-regression', width, JSON.stringify(rootState));
   await context.close();
+}
+
+try {
+  await runViewport(1366, 768);
+  await runViewport(390, 844);
 } finally {
   await browser.close();
 }
