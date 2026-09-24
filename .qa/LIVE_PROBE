@@ -1,2 +1,2 @@
-release_commit=2f5722d6d389f1a42f1b2443007779a050628291
-probe=production-full-matrix-4-audit-alignment
+release_commit=7d0ac461cf2c21803e355034eb216c91298f3f18
+probe=production-full-matrix-5-legacy-semantic-fix
