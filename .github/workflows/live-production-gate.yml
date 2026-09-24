@@ -210,6 +210,14 @@ jobs:
           cd /tmp/live-e2e
           node check.mjs
 
+      - name: Responsive motion matrix
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/responsive-motion
+          node --check scripts/responsive-motion-matrix.mjs
+          node scripts/responsive-motion-matrix.mjs
+
       - name: Full legacy-equivalent production matrices
         shell: bash
         run: |
@@ -230,4 +238,6 @@ jobs:
             /tmp/live-e2e/contact.png
             /tmp/live-e2e/mobile.png
             /tmp/live-matrix/results.json
+            /tmp/responsive-motion/results.json
+            /tmp/responsive-motion/*.png
           if-no-files-found: warn
