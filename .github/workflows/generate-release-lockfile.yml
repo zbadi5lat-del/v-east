@@ -7,7 +7,7 @@ on:
       - ".github/workflows/generate-release-lockfile.yml"
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
   lockfile:
@@ -15,6 +15,8 @@ jobs:
     timeout-minutes: 8
     steps:
       - uses: actions/checkout@v7
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
       - uses: actions/setup-node@v7
         with:
           node-version: 22
@@ -25,6 +27,20 @@ jobs:
           npm ci --ignore-scripts --no-audit --no-fund
           npm run lint
           npm run build
+      - name: Commit lockfile to verification branch
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add package-lock.json
+          if git diff --cached --quiet; then
+            echo "Lockfile already current"
+          else
+            git commit -m "build: lock production dependency graph"
+            git push origin "HEAD:${GITHUB_HEAD_REF}"
+          fi
+
       - name: Upload lockfile
         uses: actions/upload-artifact@v4
         with:
