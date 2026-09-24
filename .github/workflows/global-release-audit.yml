@@ -10,6 +10,15 @@ on:
       - "package.json"
       - "vercel.json"
       - ".github/workflows/global-release-audit.yml"
+  push:
+    branches: [main]
+    paths:
+      - "src/**"
+      - "scripts/**"
+      - "index.html"
+      - "package.json"
+      - "vercel.json"
+      - ".github/workflows/global-release-audit.yml"
 
 permissions:
   contents: read
@@ -50,6 +59,39 @@ jobs:
           test ! -d dist/.git
           ! git ls-files | grep -E '(^|/)(node_modules|dist|\.vercel|\.env)(/|$)'
           ! grep -RIE --exclude-dir=node_modules --exclude-dir=.git --exclude='*.webp' --exclude='*.pdf'             '(BEGIN (RSA|OPENSSH|EC|DSA) PRIVATE KEY|ghp_[A-Za-z0-9]{20,}|github_pat_[A-Za-z0-9_]{20,}|sk-[A-Za-z0-9_-]{20,}|VERCEL_TOKEN\s*=|API_KEY\s*=)'             . || { echo "::error::Potential secret-like material found"; exit 1; }
+
+      - name: Production security-header configuration
+        shell: bash
+        run: |
+          set -euo pipefail
+          node - <<'NODE'
+          const fs=require('node:fs');
+          const config=JSON.parse(fs.readFileSync('vercel.json','utf8'));
+          const all=(config.headers||[]).flatMap(rule=>rule.headers||[]);
+          const map=new Map(all.map(({key,value})=>[key.toLowerCase(),value]));
+          const required={
+            'x-content-type-options':'nosniff',
+            'referrer-policy':'strict-origin-when-cross-origin',
+            'x-frame-options':'DENY',
+            'permissions-policy':'camera=(), microphone=(), geolocation=(), payment=(), usb=()',
+            'x-permitted-cross-domain-policies':'none'
+          };
+          for(const [key,value] of Object.entries(required)){
+            if(map.get(key)!==value) throw new Error('Missing/incorrect security header: '+key);
+          }
+          const csp=map.get('content-security-policy')||'';
+          for(const token of ["frame-ancestors 'none'","base-uri 'self'","object-src 'none'"]){
+            if(!csp.includes(token)) throw new Error('CSP missing '+token);
+          }
+          console.log('Security header configuration PASS');
+          NODE
+
+      - name: Dependency vulnerability audit
+        shell: bash
+        run: |
+          set -euo pipefail
+          npm install --package-lock-only --ignore-scripts --no-audit --no-fund
+          npm audit --audit-level=high
 
       - name: Install browser driver library
         run: npm install --no-audit --no-fund --no-save --package-lock=false playwright-core@1.55.0
