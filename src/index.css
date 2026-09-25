@@ -3201,3 +3201,187 @@ html[data-theme="light"] .site-header.is-scrolled .site-header__inner { backgrou
   .site-entry__foam-pockets { display: none; }
   .site-entry__shore-grain { opacity: .26; }
 }
+
+
+/* ========================================================================== */
+/* 2026-09-25 — Final hardening: light-mode contrast + mobile media safety    */
+/* ========================================================================== */
+
+/* Content remains readable immediately after theme changes. */
+html[data-theme="light"] .hero-copy-scroll > .hero-enter--1 {
+  background: rgba(255,255,255,.96) !important;
+  border-color: rgba(23,103,130,.18) !important;
+  box-shadow: 0 12px 28px rgba(16,42,51,.10);
+}
+html[data-theme="light"] .hero-copy-scroll > .hero-enter--1 .text-white { color:#102A33 !important; }
+html[data-theme="light"] .hero-copy-scroll > .hero-enter--1 .text-corp-sand { color:#8A6329 !important; }
+
+html[data-theme="light"] .hero-field-card,
+html[data-theme="light"] .hero-status-card,
+html[data-theme="light"] .contact-link,
+html[data-theme="light"] .facility-chip:not([aria-pressed="true"]),
+html[data-theme="light"] .mobile-navigation-drawer,
+html[data-theme="light"] .footer-contact {
+  background: rgba(255,255,255,.96) !important;
+  color: #102A33 !important;
+  border-color: rgba(23,103,130,.16) !important;
+  box-shadow: 0 18px 44px rgba(16,42,51,.09);
+}
+
+html[data-theme="light"] .site-footer {
+  background: linear-gradient(180deg, rgba(247,244,237,.99), rgba(237,244,241,.99)) !important;
+  color:#102A33 !important;
+}
+html[data-theme="light"] .footer-contact:hover {
+  background: rgba(23,103,130,.07) !important;
+  color: #176782 !important;
+}
+html[data-theme="light"] .footer-contact .text-corp-sea { color:#176782 !important; }
+
+html[data-theme="light"] .hero-field-card .text-white,
+html[data-theme="light"] .hero-status-card .text-white,
+html[data-theme="light"] .contact-link .text-white,
+html[data-theme="light"] .mobile-navigation-drawer .text-white,
+html[data-theme="light"] .site-footer .text-white {
+  color:#102A33 !important;
+}
+html[data-theme="light"] .hero-field-card .text-slate-300,
+html[data-theme="light"] .hero-status-card .text-slate-300,
+html[data-theme="light"] .contact-link .text-slate-300,
+html[data-theme="light"] .contact-link .text-slate-400,
+html[data-theme="light"] .mobile-navigation-drawer .text-slate-200,
+html[data-theme="light"] .mobile-navigation-drawer .text-slate-300,
+html[data-theme="light"] .site-footer .text-slate-300,
+html[data-theme="light"] .site-footer .text-slate-400,
+html[data-theme="light"] .site-footer .text-slate-500 {
+  color:#52676B !important;
+}
+html[data-theme="light"] .hero-field-card .bg-corp-navy,
+html[data-theme="light"] .contact-link__icon,
+html[data-theme="light"] .mobile-navigation-drawer .bg-corp-navy-light {
+  background: rgba(23,103,130,.08) !important;
+}
+html[data-theme="light"] .mobile-navigation-drawer .btn-primary,
+html[data-theme="light"] .mobile-navigation-drawer .btn-primary * { color:#fff !important; }
+html[data-theme="light"] .mobile-navigation-drawer .text-corp-sand,
+html[data-theme="light"] .site-footer .text-corp-sand,
+html[data-theme="light"] .hero-field-card .text-corp-sand,
+html[data-theme="light"] .hero-status-card .text-corp-sand,
+html[data-theme="light"] .hero-highlight {
+  color:#8A6329 !important;
+}
+html[data-theme="light"] .header-icon-button { color:#102A33 !important; }
+html[data-theme="light"] .header-icon-button:hover {
+  background:rgba(23,103,130,.06) !important;
+  border-color:rgba(23,103,130,.14) !important;
+}
+html[data-theme="light"] .nav-link:not([aria-current="location"]) { color:#52676B; }
+html[data-theme="light"] .nav-link[aria-current="location"] { color:#102A33; }
+html[data-theme="light"] .site-entry__scope,
+html[data-theme="light"] .site-entry__scope-item { color:#52676B; }
+html[data-theme="light"] .site-entry__scope-item i { background:#176782; }
+
+/* Daylight parity for every section that uses a dark surface in the dark theme. */
+html[data-theme="light"] #sectors,
+html[data-theme="light"] #operating-system,
+html[data-theme="light"] #field-operations,
+html[data-theme="light"] #leadership,
+html[data-theme="light"] #contact-section {
+  background: linear-gradient(180deg, rgba(247,244,237,.99), rgba(238,244,241,.99)) !important;
+  color:#102A33;
+}
+
+html[data-theme="light"] .sector-card,
+html[data-theme="light"] .operating-step,
+html[data-theme="light"] .leadership-card {
+  background: rgba(255,255,255,.97) !important;
+  border-color: rgba(23,103,130,.14) !important;
+  box-shadow: 0 18px 46px rgba(16,42,51,.08);
+}
+html[data-theme="light"] .sector-card:hover,
+html[data-theme="light"] .operating-step:hover,
+html[data-theme="light"] .leadership-card:hover {
+  background: rgba(250,252,251,.99) !important;
+  border-color: rgba(23,103,130,.26) !important;
+}
+html[data-theme="light"] .sector-card .text-white,
+html[data-theme="light"] .operating-step .text-white,
+html[data-theme="light"] .leadership-card .text-white,
+html[data-theme="light"] #operating-system .text-white,
+html[data-theme="light"] #contact-section .text-white {
+  color:#102A33 !important;
+}
+html[data-theme="light"] .sector-card .text-slate-300,
+html[data-theme="light"] .operating-step .text-slate-300,
+html[data-theme="light"] .leadership-card .text-slate-300,
+html[data-theme="light"] #operating-system .text-slate-300,
+html[data-theme="light"] #contact-section .text-slate-300,
+html[data-theme="light"] #contact-section .text-slate-400,
+html[data-theme="light"] .leadership-card .text-corp-muted,
+html[data-theme="light"] .sector-card .text-corp-border,
+html[data-theme="light"] .operating-step .text-corp-border {
+  color:#52676B !important;
+}
+html[data-theme="light"] .sector-card .feature-icon,
+html[data-theme="light"] .operating-step .bg-corp-navy-light,
+html[data-theme="light"] .leadership-card .bg-corp-navy-light {
+  background: rgba(23,103,130,.08) !important;
+  border-color: rgba(23,103,130,.14) !important;
+  color:#176782 !important;
+}
+html[data-theme="light"] .sector-card .text-corp-sand,
+html[data-theme="light"] .operating-step .text-corp-sand,
+html[data-theme="light"] .leadership-card .text-corp-sand,
+html[data-theme="light"] #operating-system .text-corp-sand,
+html[data-theme="light"] #contact-section .text-corp-sand {
+  color:#8A6329 !important;
+}
+html[data-theme="light"] .leadership-card .leadership-card__line,
+html[data-theme="light"] .operating-flow__line span {
+  background:#176782 !important;
+}
+
+/* Mobile: prevent decorative/floating imagery from covering copy. */
+@media (max-width: 767px) {
+  .hero-section .hero-media-frame {
+    display: flex;
+    flex-direction: column;
+    gap: .9rem;
+    padding-bottom: 0;
+  }
+  .hero-section .hero-field-card {
+    position: relative !important;
+    inset: auto !important;
+    width: 100% !important;
+    max-width: none !important;
+    margin-top: 0;
+    translate: none !important;
+  }
+  .hero-section .hero-media-main { margin-bottom: 0; }
+
+  .field-card { min-height: 400px; }
+
+  .hero-media-main .media-overlay,
+  .field-card .media-overlay,
+  #contact-section .media-overlay {
+    padding-top: 4rem;
+    background: linear-gradient(180deg, rgba(7,27,36,.04) 0%, rgba(7,27,36,.52) 44%, rgba(7,27,36,.94) 100%);
+    text-shadow: 0 2px 10px rgba(0,0,0,.32);
+  }
+  .hero-media-main .media-overlay .font-cairo,
+  .field-card .media-overlay .font-cairo,
+  #contact-section .media-overlay .font-cairo {
+    line-height: 1.35;
+    text-wrap: balance;
+  }
+  .place-logo-card,
+  .place-dialog-panel,
+  .service-card,
+  .sector-card,
+  .operating-step,
+  .leadership-card,
+  .faq-item,
+  .contact-link {
+    overflow-wrap: anywhere;
+  }
+}
