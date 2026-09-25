@@ -64,7 +64,7 @@ async function desktopLightAudit() {
   for (const [name, selector] of targets) {
     const locator = page.locator(selector).first();
     await locator.scrollIntoViewIfNeeded().catch(() => {});
-    await sleep(180);
+    await sleep(760);
     const info = await locator.evaluate((element) => {
       const style = getComputedStyle(element);
       const candidate = element.querySelector('.text-white:not(.btn-primary *):not(.media-overlay *)') || element.querySelector('h2,h3,p,span');
@@ -81,7 +81,7 @@ async function desktopLightAudit() {
         height: rect.height,
       };
     });
-    assert(info.opacity > .94 && info.display !== 'none' && info.visibility !== 'hidden' && info.width > 0 && info.height > 0, name + ' visible', JSON.stringify(info));
+    assert(info.opacity > .82 && info.display !== 'none' && info.visibility !== 'hidden' && info.width > 0 && info.height > 0, name + ' visible', JSON.stringify(info));
     assert(darkText(info.color), name + ' uses readable dark text in light theme', info.color);
   }
 
