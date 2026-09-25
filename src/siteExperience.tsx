@@ -124,6 +124,7 @@ export function SiteExperienceProvider({ children }: { children: ReactNode }) {
 
         delete root.dataset.experienceSwitching;
         window.dispatchEvent(new Event(EXPERIENCE_CHANGE_EVENT));
+        window.dispatchEvent(new Event('resize'));
       });
     });
 
@@ -147,16 +148,10 @@ export function SiteExperienceProvider({ children }: { children: ReactNode }) {
 
   const toggleTheme = () => {
     const next = theme === 'dark' ? 'light' : 'dark';
-    const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-    const documentWithTransition = document as Document & { startViewTransition?: (callback: () => void) => unknown };
 
+    // Stability-first: avoid stale browser view-transition paint layers.
     preserveRevealState();
-
-    if (!reduced && documentWithTransition.startViewTransition) {
-      documentWithTransition.startViewTransition(() => setThemeState(next));
-    } else {
-      setThemeState(next);
-    }
+    setThemeState(next);
   };
 
   const value = useMemo(() => ({ language, setLanguage, theme, setTheme, toggleTheme, copy }), [language, theme, copy]);
