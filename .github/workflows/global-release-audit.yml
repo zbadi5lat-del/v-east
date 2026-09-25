@@ -118,6 +118,14 @@ jobs:
           CHROME_PATH="$(command -v google-chrome || command -v chromium || command -v chromium-browser)"
           PREVIEW_URL="http://127.0.0.1:4173" CHROME_PATH="$CHROME_PATH"             timeout --signal=TERM --kill-after=10s 240s node scripts/historical-regression-matrix.mjs
 
+      - name: Light-mode contrast and mobile overlap regression
+        shell: bash
+        run: |
+          set -euo pipefail
+          CHROME_PATH="$(command -v google-chrome || command -v chromium || command -v chromium-browser)"
+          PREVIEW_URL="http://127.0.0.1:4173" CHROME_PATH="$CHROME_PATH" \
+            timeout --signal=TERM --kill-after=10s 180s node scripts/light-mobile-regression.mjs
+
       - name: No-refresh reveal regression
         shell: bash
         run: |
