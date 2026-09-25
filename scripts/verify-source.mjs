@@ -19,7 +19,9 @@ pass(/<html[^>]*lang="ar"[^>]*dir="rtl"[^>]*data-theme="dark"/.test(indexHtml),'
 pass(indexHtml.includes("localStorage.getItem('veast-theme')")&&indexHtml.includes("localStorage.getItem('veast-language')"),'Pre-paint theme/language restoration is required.');
 pass(source.includes("root.lang = language")&&source.includes("root.dir = language === 'ar' ? 'rtl' : 'ltr'"),'Runtime language must update lang and dir.');
 pass(source.includes("root.dataset.theme = theme")&&source.includes("window.localStorage.setItem('veast-theme', theme)"),'Theme state must be real and persisted.');
-pass(source.includes("startViewTransition")&&source.includes("prefers-reduced-motion: reduce"),'Theme transition must be progressive and reduced-motion aware.');
+pass(!source.includes("startViewTransition")&&source.includes("preserveRevealState();")&&source.includes("setThemeState(next);"),'Theme switching must avoid stale browser view-transition layers while preserving reveal state.');
+pass(source.includes("window.dispatchEvent(new Event('resize'))"),'Theme/language switching must force measured UI to reflow after experience changes.');
+pass(productionText.includes('Final hardening: light-mode contrast + mobile media safety')&&productionText.includes('.hero-section .hero-field-card')&&productionText.includes('position: relative !important'),'Final light-mode contrast and mobile overlap hardening must remain present.');
 pass(source.includes('theme-scene-toggle')&&source.includes('ThemeSceneToggle'),'Animated day/night theme control must be implemented.');
 pass(source.includes('LanguageToggle')&&source.includes("setLanguage('ar')")&&source.includes("setLanguage('en')"),'Both Arabic and English controls must be implemented.');
 pass(i18n.includes("ar: {")&&i18n.includes("en: {")&&i18n.includes("facilities:")&&i18n.includes("places:"),'Central translation catalog must contain Arabic and English content, including the featured places section.');
