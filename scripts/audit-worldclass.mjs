@@ -29,7 +29,7 @@ check('theme-persistence',source.includes("localStorage.setItem('veast-theme'")&
 check('system-theme-fallback',html.includes("prefers-color-scheme: light"),'First visit respects system color preference.');
 check('video-derived-toggle',source.includes('theme-scene-toggle__orb')&&css.includes('.theme-scene-toggle__water')&&css.includes('.theme-scene-toggle__clouds')&&css.includes('.theme-scene-toggle__stars'),'Video-inspired sun/moon/cloud/water theme scene is implemented without external animation assets.');
 check('theme-control-accessibility',source.includes('role="switch"')&&source.includes('aria-checked={isDark}')&&source.includes('switchToLight')&&source.includes('switchToDark'),'Theme control exposes switch semantics and localized labels.');
-check('theme-transition-progressive',source.includes('startViewTransition')&&source.includes("prefers-reduced-motion: reduce"),'Theme transition uses progressive enhancement and reduced-motion fallback.');
+check('theme-transition-stable',!source.includes('startViewTransition')&&source.includes('preserveRevealState();')&&source.includes("window.dispatchEvent(new Event('resize'))"),'Theme transition preserves revealed content and forces layout remeasurement without stale browser transition layers.');
 check('distinct-light-system',css.includes('--color-corp-navy: #EEF3F0')&&css.includes('--color-corp-sand: #765522')&&css.includes('coastal daylight'),'Light mode has a distinct restrained daylight palette.');
 check('light-primary-text-contrast',ratio('#102A33','#EEF3F0')>=4.5,`Light primary contrast ${ratio('#102A33','#EEF3F0').toFixed(2)}:1.`);
 check('light-muted-contrast',ratio('#52676B','#EEF3F0')>=4.5,`Light muted contrast ${ratio('#52676B','#EEF3F0').toFixed(2)}:1.`);
