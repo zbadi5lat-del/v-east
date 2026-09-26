@@ -67,15 +67,56 @@ async function snapshot(page, mobile = false) {
         borderLeftColor: s.borderLeftColor,
         boxShadow: s.boxShadow,
         outlineColor: s.outlineColor,
+        fill: s.fill,
+        stroke: s.stroke,
       };
     };
+
     const result = {};
     for (const [name, selector] of targets) result[name] = read(pick(selector));
+
+    const shell = document.querySelector('.site-shell');
+    result.domFingerprint = shell
+      ? [...shell.querySelectorAll('*')].map((el, index) => {
+          const s = getComputedStyle(el);
+          return {
+            index,
+            tag: el.tagName,
+            id: el.id || '',
+            className: typeof el.className === 'string' ? el.className : '',
+            color: s.color,
+            backgroundColor: s.backgroundColor,
+            backgroundImage: s.backgroundImage,
+            borderTopColor: s.borderTopColor,
+            borderRightColor: s.borderRightColor,
+            borderBottomColor: s.borderBottomColor,
+            borderLeftColor: s.borderLeftColor,
+            fill: s.fill,
+            stroke: s.stroke,
+            boxShadow: s.boxShadow,
+            display: s.display,
+            visibility: s.visibility,
+          };
+        })
+      : [];
+
     result.root = {
       theme: document.documentElement.dataset.theme || '',
       scheme: document.documentElement.style.colorScheme || '',
       bodyBg: getComputedStyle(document.body).backgroundColor,
       shellColor: getComputedStyle(document.querySelector('.site-shell')).color,
+      variables: {
+        navy: getComputedStyle(document.documentElement).getPropertyValue('--color-corp-navy').trim(),
+        navyDark: getComputedStyle(document.documentElement).getPropertyValue('--color-corp-navy-dark').trim(),
+        navyLight: getComputedStyle(document.documentElement).getPropertyValue('--color-corp-navy-light').trim(),
+        blue: getComputedStyle(document.documentElement).getPropertyValue('--color-corp-blue').trim(),
+        light: getComputedStyle(document.documentElement).getPropertyValue('--color-corp-light').trim(),
+        darkText: getComputedStyle(document.documentElement).getPropertyValue('--color-corp-dark-text').trim(),
+        muted: getComputedStyle(document.documentElement).getPropertyValue('--color-corp-muted').trim(),
+        border: getComputedStyle(document.documentElement).getPropertyValue('--color-corp-border').trim(),
+        sand: getComputedStyle(document.documentElement).getPropertyValue('--color-corp-sand').trim(),
+        sea: getComputedStyle(document.documentElement).getPropertyValue('--color-corp-sea').trim(),
+      },
     };
     return result;
   }, targets);
@@ -84,6 +125,7 @@ async function snapshot(page, mobile = false) {
 function diffSnapshots(a, b) {
   const diffs = [];
   for (const key of Object.keys(a)) {
+    if (key === 'domFingerprint') continue;
     if (!(key in b)) {
       diffs.push({ key, reason: 'missing-in-switched-dark' });
       continue;
@@ -91,6 +133,21 @@ function diffSnapshots(a, b) {
     const left = JSON.stringify(a[key]);
     const right = JSON.stringify(b[key]);
     if (left !== right) diffs.push({ key, freshDark: a[key], switchedDark: b[key] });
+  }
+
+  const leftDom = a.domFingerprint || [];
+  const rightDom = b.domFingerprint || [];
+  if (leftDom.length !== rightDom.length) {
+    diffs.push({ key: 'domFingerprint.length', freshDark: leftDom.length, switchedDark: rightDom.length });
+  } else {
+    for (let i = 0; i < leftDom.length; i += 1) {
+      const left = leftDom[i];
+      const right = rightDom[i];
+      if (JSON.stringify(left) !== JSON.stringify(right)) {
+        diffs.push({ key: 'domFingerprint[' + i + ']', freshDark: left, switchedDark: right });
+        if (diffs.length >= 30) break;
+      }
+    }
   }
   return diffs;
 }
@@ -133,7 +190,7 @@ async function run(width, height) {
 
   await clickTheme(page);
   await page.waitForFunction(() => document.documentElement.dataset.theme === 'dark', { timeout: 2500 });
-  await sleep(1200);
+  await sleep(1800);
 
   const switchedDark = await snapshot(page, width < 768);
   assert(switchedDark.root.theme === 'dark' && switchedDark.root.scheme === 'dark', `switched-back dark root ${width}`, JSON.stringify(switchedDark.root));
