@@ -162,6 +162,13 @@ jobs:
           CHROME_PATH="$(command -v google-chrome || command -v chromium || command -v chromium-browser)"
           PREVIEW_URL="$LIVE_URL" CHROME_PATH="$CHROME_PATH" timeout --signal=TERM --kill-after=10s 240s node scripts/historical-regression-matrix.mjs
 
+      - name: Live dark/light/dark theme reversibility regression
+        shell: bash
+        run: |
+          set -euo pipefail
+          CHROME_PATH="$(command -v google-chrome || command -v chromium || command -v chromium-browser)"
+          PREVIEW_URL="$LIVE_URL" CHROME_PATH="$CHROME_PATH" timeout --signal=TERM --kill-after=10s 180s node scripts/theme-reversibility-regression.mjs
+
       - name: Live light-mode contrast and mobile overlap regression
         shell: bash
         run: |
