@@ -158,6 +158,23 @@ async function clickTheme(page) {
   await toggle.click();
 }
 
+async function clickThemeAndReadRootSynchronously(page) {
+  return page.evaluate(() => {
+    const toggle = [...document.querySelectorAll('[role="switch"]')].find((element) => {
+      if (!(element instanceof HTMLElement)) return false;
+      const style = getComputedStyle(element);
+      const rect = element.getBoundingClientRect();
+      return style.display !== 'none' && style.visibility !== 'hidden' && rect.width > 0 && rect.height > 0;
+    });
+    if (!(toggle instanceof HTMLElement)) throw new Error('visible theme switch missing');
+    toggle.click();
+    return {
+      theme: document.documentElement.dataset.theme || '',
+      scheme: document.documentElement.style.colorScheme || '',
+    };
+  });
+}
+
 async function run(width, height) {
   const baseContext = await browser.newContext({ viewport: { width, height }, reducedMotion: 'no-preference' });
   await baseContext.addInitScript(() => {
@@ -184,11 +201,13 @@ async function run(width, height) {
   await page.goto(url, { waitUntil: 'networkidle', timeout: 30000 });
   await removeEntrance(page);
 
-  await clickTheme(page);
+  const immediateLight = await clickThemeAndReadRootSynchronously(page);
+  assert(immediateLight.theme === 'light' && immediateLight.scheme === 'light', `root switches to light synchronously ${width}`, JSON.stringify(immediateLight));
   await page.waitForFunction(() => document.documentElement.dataset.theme === 'light', { timeout: 2500 });
   await sleep(1200);
 
-  await clickTheme(page);
+  const immediateDark = await clickThemeAndReadRootSynchronously(page);
+  assert(immediateDark.theme === 'dark' && immediateDark.scheme === 'dark', `root switches back to dark synchronously ${width}`, JSON.stringify(immediateDark));
   await page.waitForFunction(() => document.documentElement.dataset.theme === 'dark', { timeout: 2500 });
   await sleep(1800);
 
