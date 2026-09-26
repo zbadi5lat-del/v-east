@@ -32,6 +32,14 @@ function setMeta(selector: string, value: string) {
   document.querySelector<HTMLMetaElement>(selector)?.setAttribute('content', value);
 }
 
+function applyThemeToDocument(theme: ThemeMode) {
+  const root = document.documentElement;
+  root.dataset.theme = theme;
+  root.style.colorScheme = theme;
+  window.localStorage.setItem('veast-theme', theme);
+  setMeta('meta[name="theme-color"]', theme === 'dark' ? '#0B2936' : '#F4F1EA');
+}
+
 function revealElement(element: HTMLElement) {
   element.dataset.revealed = 'true';
   element.classList.add('is-visible');
@@ -100,11 +108,7 @@ export function SiteExperienceProvider({ children }: { children: ReactNode }) {
   }, [copy, language]);
 
   useEffect(() => {
-    const root = document.documentElement;
-    root.dataset.theme = theme;
-    root.style.colorScheme = theme;
-    window.localStorage.setItem('veast-theme', theme);
-    setMeta('meta[name="theme-color"]', theme === 'dark' ? '#0B2936' : '#F4F1EA');
+    applyThemeToDocument(theme);
   }, [theme]);
 
   useEffect(() => {
@@ -143,14 +147,17 @@ export function SiteExperienceProvider({ children }: { children: ReactNode }) {
   const setTheme = (next: ThemeMode) => {
     if (next === theme) return;
     preserveRevealState();
+    applyThemeToDocument(next);
     setThemeState(next);
   };
 
   const toggleTheme = () => {
     const next = theme === 'dark' ? 'light' : 'dark';
 
-    // Stability-first: avoid stale browser view-transition paint layers.
+    // Apply the root theme in the same event turn so CSS and React state never
+    // spend a paint frame in different themes.
     preserveRevealState();
+    applyThemeToDocument(next);
     setThemeState(next);
   };
 
