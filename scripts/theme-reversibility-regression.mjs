@@ -168,9 +168,30 @@ async function clickThemeAndReadRootSynchronously(page) {
     });
     if (!(toggle instanceof HTMLElement)) throw new Error('visible theme switch missing');
     toggle.click();
+
+    const toMs = (value) => {
+      const raw = String(value || '').trim();
+      if (!raw) return 0;
+      return Math.max(...raw.split(',').map((token) => {
+        const t = token.trim();
+        if (t.endsWith('ms')) return Number.parseFloat(t) || 0;
+        if (t.endsWith('s')) return (Number.parseFloat(t) || 0) * 1000;
+        return 0;
+      }));
+    };
+    const probes = ['.site-header__inner', '.hero-field-card', '#sectors .sector-card']
+      .map((selector) => document.querySelector(selector))
+      .filter(Boolean)
+      .map((element) => ({
+        className: element.className,
+        transitionMs: toMs(getComputedStyle(element).transitionDuration),
+      }));
+
     return {
       theme: document.documentElement.dataset.theme || '',
       scheme: document.documentElement.style.colorScheme || '',
+      switching: document.documentElement.dataset.themeSwitching || '',
+      probes,
     };
   });
 }
@@ -203,14 +224,19 @@ async function run(width, height) {
 
   const immediateLight = await clickThemeAndReadRootSynchronously(page);
   assert(immediateLight.theme === 'light' && immediateLight.scheme === 'light', `root switches to light synchronously ${width}`, JSON.stringify(immediateLight));
+  assert(immediateLight.switching === 'true', `theme switch freeze starts synchronously ${width}`, JSON.stringify(immediateLight));
+  assert(immediateLight.probes.every((probe) => probe.transitionMs <= 0.1), `theme switch freezes component transitions immediately ${width}`, JSON.stringify(immediateLight.probes));
   await page.waitForFunction(() => document.documentElement.dataset.theme === 'light', { timeout: 2500 });
   await sleep(1200);
 
   const immediateDark = await clickThemeAndReadRootSynchronously(page);
   assert(immediateDark.theme === 'dark' && immediateDark.scheme === 'dark', `root switches back to dark synchronously ${width}`, JSON.stringify(immediateDark));
+  assert(immediateDark.switching === 'true', `dark switch freeze starts synchronously ${width}`, JSON.stringify(immediateDark));
+  assert(immediateDark.probes.every((probe) => probe.transitionMs <= 0.1), `dark switch freezes component transitions immediately ${width}`, JSON.stringify(immediateDark.probes));
   await page.waitForFunction(() => document.documentElement.dataset.theme === 'dark', { timeout: 2500 });
   await sleep(1800);
 
+  assert((await page.evaluate(() => document.documentElement.dataset.themeSwitching || '')) === '', `theme switch freeze clears after commit cycle ${width}`);
   const switchedDark = await snapshot(page, width < 768);
   assert(switchedDark.root.theme === 'dark' && switchedDark.root.scheme === 'dark', `switched-back dark root ${width}`, JSON.stringify(switchedDark.root));
 
