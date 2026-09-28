@@ -40,6 +40,10 @@ function applyThemeToDocument(theme: ThemeMode) {
   setMeta('meta[name="theme-color"]', theme === 'dark' ? '#0B2936' : '#F4F1EA');
 }
 
+function beginThemeSwitch() {
+  document.documentElement.dataset.themeSwitching = 'true';
+}
+
 function revealElement(element: HTMLElement) {
   element.dataset.revealed = 'true';
   element.classList.add('is-visible');
@@ -127,6 +131,7 @@ export function SiteExperienceProvider({ children }: { children: ReactNode }) {
         });
 
         delete root.dataset.experienceSwitching;
+        delete root.dataset.themeSwitching;
         window.dispatchEvent(new Event(EXPERIENCE_CHANGE_EVENT));
         window.dispatchEvent(new Event('resize'));
       });
@@ -146,6 +151,7 @@ export function SiteExperienceProvider({ children }: { children: ReactNode }) {
 
   const setTheme = (next: ThemeMode) => {
     if (next === theme) return;
+    beginThemeSwitch();
     preserveRevealState();
     applyThemeToDocument(next);
     setThemeState(next);
@@ -156,6 +162,7 @@ export function SiteExperienceProvider({ children }: { children: ReactNode }) {
 
     // Apply the root theme in the same event turn so CSS and React state never
     // spend a paint frame in different themes.
+    beginThemeSwitch();
     preserveRevealState();
     applyThemeToDocument(next);
     setThemeState(next);
