@@ -1211,6 +1211,37 @@ html[data-theme="light"] body {
   color: #102A33;
 }
 
+
+/* Theme switching on phones should feel immediate and never show a half-switched frame.
+   Freeze transitions for one commit cycle while the root theme flips, then restore them. */
+html[data-theme-switching="true"] .site-shell,
+html[data-theme-switching="true"] .site-shell * {
+  transition-property: none !important;
+  transition-duration: 0.01ms !important;
+  transition-delay: 0ms !important;
+}
+
+html[data-theme-switching="true"] .site-shell *::before,
+html[data-theme-switching="true"] .site-shell *::after {
+  transition-property: none !important;
+  transition-duration: 0.01ms !important;
+  transition-delay: 0ms !important;
+}
+
+@media (max-width: 768px), (pointer: coarse) {
+  html[data-theme-switching="true"] .site-shell,
+  html[data-theme-switching="true"] .site-shell * {
+    animation-duration: 0.01ms !important;
+    animation-delay: 0ms !important;
+    scroll-behavior: auto !important;
+  }
+
+  ::view-transition-old(root),
+  ::view-transition-new(root) {
+    animation: none !important;
+  }
+}
+
 html[lang="en"] body,
 html[lang="en"] .font-cairo {
   font-family: 'Inter', sans-serif;
