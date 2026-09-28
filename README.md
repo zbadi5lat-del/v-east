@@ -36,7 +36,7 @@ Each venue uses a compact logo-first tile that opens an accessible profile dialo
 - 44px minimum project touch-target gate for Featured Places interactions.
 - Text-spacing and zoom/reflow coverage.
 - Floating PDF/WhatsApp controls become non-interactive when they would cover the Contact section.
-- Local production imagery only; no AI watermark/generator residue.
+- Local production imagery only, with a clean and consistent V.East brand presentation.
 
 ## Verified production evidence — 2026-09-24
 
